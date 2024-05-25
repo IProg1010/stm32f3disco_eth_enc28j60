@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "stm32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17"
+            //"intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

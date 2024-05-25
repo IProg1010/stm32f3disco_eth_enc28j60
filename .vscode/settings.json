@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "packet_desription.h": "c",
+        "spi.h": "c",
+        "pbuf.h": "c",
+        "mem.h": "c",
+        "icmp.h": "c",
+        "ip.h": "c",
+        "opt.h": "c",
+        "autoip.h": "c",
+        "tcpip.h": "c",
+        "tcp_server.h": "c",
+        "lwip.h": "c"
+    },
+    "cortex-debug.variableUseNaturalFormat": false
+}
