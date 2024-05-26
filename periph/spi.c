@@ -1,5 +1,6 @@
 #include "spi.h"
 #include "stm32f303xc.h"
+#include "F3_MACROS.h"
 
 //spi init
 void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
@@ -37,7 +38,7 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
     */
     
     //Bidirectional data mode enable
-    CLEAR_BIT(spi_interf->CR1, SPI_CR1_BIDIMODE);     
+    SET_BIT(spi_interf->CR1, SPI_CR1_BIDIMODE);     
     //Output enable in bidirectional mode
     CLEAR_BIT(spi_interf->CR1, SPI_CR1_BIDIOE); 
     //Full duplex mode
@@ -45,7 +46,7 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
     //CRC transfer next
     CLEAR_BIT(spi_interf->CR1, SPI_CR1_CRCNEXT);         
     //8 bit data frame
-    CLEAR_BIT(spi_interf->CR1, SPI_CR1_DFF); 
+    //CLEAR_BIT(spi_interf->CR1, SPI_CR1_DFF); 
     //Full duplex mode
     CLEAR_BIT(spi_interf->CR1, SPI_CR1_RXONLY);     
     //Software slave management
@@ -129,7 +130,7 @@ void spi_read(SPI_TypeDef* spi_interf, uint8_t* data, uint16_t size)
     uint16_t i = 0;
     while(i < size)
     {
-        spi_interf->DR = 0xFF;
+        //spi_interf->DR = 0xFF;
         while(!(READ_BIT(spi_interf->SR, SPI_SR_RXNE) == (SPI_SR_RXNE))) {}
         data[i] = spi_interf->DR;
         i++;
@@ -186,35 +187,51 @@ SPIx_NSS
             MISO - GPIOA6 (PA6)
             MOSI - GPIOA7 (PA7)
         */
-        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPAEN);
+        SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOAEN);
+
+        //PA5 Alternate function push-pull
+        CLEAR_BIT(GPIOA->MODER, GPIO_MODER_MODER5_0);
+        SET_BIT(GPIOA->MODER, GPIO_MODER_MODER5_1);
+
+        CLEAR_BIT(GPIOA->OTYPER, GPIO_OTYPER_OT_5);
+
+        SET_BIT(GPIOA->OSPEEDR, GPIO_OSPEEDER_OSPEEDR5_1);
+        SET_BIT(GPIOA->OSPEEDR, GPIO_OSPEEDER_OSPEEDR5_0);
+
+        CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR5_0);
+        CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR5_1);
         
-        GPIOA->CRL &= ~(GPIO_CRL_CNF5_Msk | GPIO_CRL_MODE5_Msk 
-                | GPIO_CRL_CNF6_Msk | GPIO_CRL_MODE6_Msk
-                | GPIO_CRL_CNF7_Msk | GPIO_CRL_MODE7_Msk);
-        /*PA5 Output Alternate function push-pull
-        SET_BIT(GPIOA->CRL, GPIO_CRL_MODE5_0);
-        SET_BIT(GPIOA->CRL, GPIO_CRL_MODE5_1);
-        SET_BIT(GPIOA->CRL, GPIO_CRL_CNF5_1);
-        CLEAR_BIT(GPIOA->CRL, GPIO_CRL_CNF5_0); 
-        /*PA6 Input floating / Input pull-up
-        //SET_BIT(GPIOA->CRL, GPIO_CRL_MODE6);
-        //SET_BIT(GPIOA->CRL, GPIO_CRL_CNF6); 
-        /*PA7 Output Alternate function push-pull
-        SET_BIT(GPIOA->CRL, GPIO_CRL_MODE7_0);
-        SET_BIT(GPIOA->CRL, GPIO_CRL_MODE7_1);
-        SET_BIT(GPIOA->CRL, GPIO_CRL_CNF7_1);
-        CLEAR_BIT(GPIOA->CRL, GPIO_CRL_CNF7_0);  */
-         
-        //SCK: MODE5 = 0x03 (11b); CNF5 = 0x02 (10b)
-        GPIOA->CRL |= (0x02<<GPIO_CRL_CNF5_Pos) | (0x03<<GPIO_CRL_MODE5_Pos);
+        GPIOA->AFR[0] |= (0x5 << GPIO_AFRH_AFRH5_Pos) | (0x5 << GPIO_AFRH_AFRH6_Pos) | (0x5 << GPIO_AFRH_AFRH7_Pos);
+
+        //SET_BIT(GPIOA->AFR[0], GPIO_AFRH_AFRH5);
+        //SET_BIT(GPIOA->AFR[0], GPIO_AFRH_AFRH5);
         
-        //MISO: MODE6 = 0x00 (00b); CNF6 = 0x01 (01b)
-        GPIOA->CRL |= (0x01<<GPIO_CRL_CNF6_Pos) | (0x00<<GPIO_CRL_MODE6_Pos);
+        //PA6 Input floating / Input pull-up
         
-        //MOSI: MODE7 = 0x03 (11b); CNF7 = 0x02 (10b)
-        GPIOA->CRL |= (0x02<<GPIO_CRL_CNF7_Pos) | (0x03<<GPIO_CRL_MODE7_Pos);
+        CLEAR_BIT(GPIOA->MODER, GPIO_MODER_MODER6_0);
+        CLEAR_BIT(GPIOA->MODER, GPIO_MODER_MODER6_1);
+
+        CLEAR_BIT(GPIOA->OTYPER, GPIO_OTYPER_OT_6);
+
+        SET_BIT(GPIOA->OSPEEDR, GPIO_OSPEEDER_OSPEEDR6_1);
+        SET_BIT(GPIOA->OSPEEDR, GPIO_OSPEEDER_OSPEEDR6_0);
+
+        CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR6_0);
+        CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR6_1);
+
+        //PA7 Alternate function push-pull
+        CLEAR_BIT(GPIOA->MODER, GPIO_MODER_MODER7_0);
+        SET_BIT(GPIOA->MODER, GPIO_MODER_MODER7_1);
+
+        CLEAR_BIT(GPIOA->OTYPER, GPIO_OTYPER_OT_7);
+
+        SET_BIT(GPIOA->OSPEEDR, GPIO_OSPEEDER_OSPEEDR7_1);
+        SET_BIT(GPIOA->OSPEEDR, GPIO_OSPEEDER_OSPEEDR7_0);
+
+        CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR7_0);
+        CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR7_1);
     }
-    if(addr == SPI2_BASE)
+    else if(addr == SPI2_BASE)
     {
         /*SPI2 pin
             SS - GPIOB12 (PB12)
@@ -222,17 +239,37 @@ SPIx_NSS
             MISO - GPIOB14 (PB14)
             MOSI - GPIOB15 (PB15)
         */
-        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPBEN);
+        SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOBEN);
 
         /*PB13 Output Alternate function push-pull*/
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
         WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF13); 
         /*PB14 Output Alternate function push-pull*/
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
         WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF14); 
         /*PB15 Output Alternate function push-pull*/
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); 
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); */
+    }
+    else if(addr == SPI3_BASE)
+    {
+        /*SPI3 pin
+            SS - GPIOB12 (PA15)
+            SCK - GPIOB13 (PC10) 
+            MISO - GPIOB14 (PC11)
+            MOSI - GPIOB15 (PC12)
+        */
+        SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOCEN);
+
+        /*PB13 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF13); 
+        /*PB14 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF14); 
+        /*PB15 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); */
     }
 }   
 

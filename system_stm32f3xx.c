@@ -162,6 +162,7 @@ const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
   * @{
   */
 
+static void SetSysClock(void);
 /**
   * @brief  Setup the microcontroller system
   * @param  None
@@ -173,6 +174,34 @@ void SystemInit(void)
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
 #endif
+/* Reset the RCC clock configuration to the default reset state ------------*/
+  /* Set HSION bit */
+  RCC->CR |= (uint32_t)0x00000001;
+
+  /* Reset CFGR register */
+  RCC->CFGR &= 0xF87FC00C;
+
+  /* Reset HSEON, CSSON and PLLON bits */
+  RCC->CR &= (uint32_t)0xFEF6FFFF;
+
+  /* Reset HSEBYP bit */
+  RCC->CR &= (uint32_t)0xFFFBFFFF;
+
+  /* Reset PLLSRC, PLLXTPRE, PLLMUL and USBPRE bits */
+  RCC->CFGR &= (uint32_t)0xFF80FFFF;
+
+  /* Reset PREDIV1[3:0] bits */
+  RCC->CFGR2 &= (uint32_t)0xFFFFFFF0;
+
+  /* Reset USARTSW[1:0], I2CSW and TIMs bits */
+  RCC->CFGR3 &= (uint32_t)0xFF00FCCC;
+  
+  /* Disable all interrupts */
+  RCC->CIR = 0x00000000;
+
+  /* Configure the System clock source, PLL Multiplier and Divider factors, 
+     AHB/APBx prescalers and Flash settings ----------------------------------*/
+  SetSysClock();
 
   /* Configure the Vector Table location -------------------------------------*/
 #if defined(USER_VECT_TAB_ADDRESS)
@@ -272,6 +301,91 @@ void SystemCoreClockUpdate (void)
   tmp = AHBPrescTable[((RCC->CFGR & RCC_CFGR_HPRE) >> 4)];
   /* HCLK clock frequency */
   SystemCoreClock >>= tmp;
+}
+
+/**
+ * @brief In the following line adjust the External High Speed oscillator (HSE) Startup 
+   Timeout value 
+   */
+#if !defined  (HSE_STARTUP_TIMEOUT) 
+ #define HSE_STARTUP_TIMEOUT  ((uint16_t)0x0500)   /*!< Time out for HSE start up */
+#endif /* HSE_STARTUP_TIMEOUT */
+
+/**
+  * @brief  Configures the System clock source, PLL Multiplier and Divider factors,
+  *               AHB/APBx prescalers and Flash settings
+  * @note   This function should be called only once the RCC clock configuration  
+  *         is reset to the default reset state (done in SystemInit() function).             
+  * @param  None
+  * @retval None
+  */
+static void SetSysClock(void)
+{
+	__IO uint32_t StartUpCounter = 0, HSEStatus = 0;
+
+	/******************************************************************************/
+	/*            PLL (clocked by HSE) used as System clock source                */
+	/******************************************************************************/
+
+	/* SYSCLK, HCLK, PCLK2 and PCLK1 configuration -----------*/
+	/* Enable HSE */
+	RCC->CR |= ((uint32_t)RCC_CR_HSEON);
+
+	/* Wait till HSE is ready and if Time out is reached exit */
+	do
+	{
+		HSEStatus = RCC->CR & RCC_CR_HSERDY;
+		StartUpCounter++;
+	} while((HSEStatus == 0) && (StartUpCounter != HSE_STARTUP_TIMEOUT));
+
+	if ((RCC->CR & RCC_CR_HSERDY) != RESET)
+	{
+		HSEStatus = (uint32_t)0x01;
+	}
+	else
+	{
+		HSEStatus = (uint32_t)0x00;
+	}
+
+	if (HSEStatus == (uint32_t)0x01)
+	{
+		/* Enable Prefetch Buffer and set Flash Latency */
+		FLASH->ACR = FLASH_ACR_PRFTBE | (uint32_t)FLASH_ACR_LATENCY_1;
+
+		/* HCLK = SYSCLK / 1 */
+		RCC->CFGR |= (uint32_t)RCC_CFGR_HPRE_DIV1;
+			
+		/* PCLK2 = HCLK / 1 */
+		RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE2_DIV1;
+		
+		/* PCLK1 = HCLK / 2 */
+		RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE1_DIV2;
+
+		/* PLL configuration */
+		RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_PLLSRC | RCC_CFGR_PLLXTPRE | RCC_CFGR_PLLMUL));
+		RCC->CFGR |= (uint32_t)(RCC_CFGR_PLLSRC_PREDIV1 | RCC_CFGR_PLLXTPRE_PREDIV1 | RCC_CFGR_PLLMUL9);
+
+		/* Enable PLL */
+		RCC->CR |= RCC_CR_PLLON;
+
+		/* Wait till PLL is ready */
+		while((RCC->CR & RCC_CR_PLLRDY) == 0)
+		{
+		}
+		
+		/* Select PLL as system clock source */
+		RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));
+		RCC->CFGR |= (uint32_t)RCC_CFGR_SW_PLL;
+
+		/* Wait till PLL is used as system clock source */
+		while ((RCC->CFGR & (uint32_t)RCC_CFGR_SWS) != (uint32_t)RCC_CFGR_SWS_PLL)
+		{
+		}
+	}
+	else
+	{ /* If HSE fails to start-up, the application will have wrong clock
+			configuration. User can add here some code to deal with this error */
+	}
 }
 
 /**

@@ -1,7 +1,8 @@
 // ---------------
-#define STM32F103xB
-#include "stm32f1xx.h"
-
+//#define STM32F103xB
+//#define STM32F303xC
+#include "stm32f303xc.h"
+#include "F3_MACROS.h"
 //---------------
 #include "usart.h"
 #include "spi.h"
@@ -26,15 +27,15 @@
 
 
 void delay();
-void enable_irq();
-void disable_irq();
+//void enable_irq();
+//void disable_irq();
 void init_GPIO();
 void init_uart_service();
 void led_on();
 void led_off();
 void debug_print(int data);
 
-void SystemInit(void)
+/*void SystemInit(void)
 {
     // Because the debugger switches PLL on, we may
     // need to switch back to the HSI oscillator without PLL
@@ -77,7 +78,7 @@ void SystemInit(void)
 
     // Update variable
    // SystemCoreClock = 72000000;
-}
+}*/
 
 //spi_config spi_1;	
 usart_config uart_param;
@@ -121,14 +122,16 @@ int main()
     //lwip_init();
     lwip_init();
     //ENC28_SetPhyInterface(&spi_1);
+    TIM_EnableIT_UPDATE(TIM2);
+    TIM_EnableCounter(TIM2);
     //ENC28J60_Init(macaddr);
     LwIP_Init();
     //server_init();
     //server_accept();
 
-    TIM_EnableIT_UPDATE(TIM2);
-    TIM_EnableCounter(TIM2);
-	enable_irq();
+
+    //NVIC_EnableIRQ;
+	//enable_irq();
 #ifdef __DEBUG_MODE__
 	
 #endif
@@ -140,51 +143,66 @@ int main()
 	while(1)
 	{
         //lwip_periodic_handle();
-        LwIP_Periodic_Handle(lwip_localtime);
-        //LwIP_Pkt_Handle();
-        	//led_on();
+        //LwIP_Periodic_Handle(lwip_localtime);
+        LwIP_Pkt_Handle();
+        led_on();
+		LwIP_Periodic_Handle(lwip_localtime);
+        
+        //delay();
+        //sys_check_timeouts();
+        //server_poll();
+		led_off();
 		//delay();
         sys_check_timeouts();
-        //server_poll();
-		//led_off();
-		//delay();
-        //sys_check_timeouts();
 	}
 }
 
 void delay(){
-	volatile int i = 0;
+	volatile uint32_t i = 0;
 	for(i = 0; i <= 3000000; i++){
 	}
 }
 
-void enable_irq()
-{
-    return 0;
+//void enable_irq()
+//{
+//    return 0;
 
-}
+//}
 
-void disable_irq()
+/*void disable_irq()
 { 
     return 0;
 
-}
+}*/
 
 void init_GPIO() 
 {
-	RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
+    SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOEEN);
 
-	GPIOC->CRH |= GPIO_CRH_MODE13_0;
+    CLEAR_BIT(GPIOE->MODER, GPIO_MODER_MODER9_1);
+    SET_BIT(GPIOE->MODER, GPIO_MODER_MODER9_0);
 
-	GPIOC->CRH &= ~GPIO_CRH_CNF13;
+    CLEAR_BIT(GPIOE->OTYPER, GPIO_OTYPER_OT_9);
+
+    SET_BIT(GPIOE->OSPEEDR, GPIO_OSPEEDER_OSPEEDR9_1);
+    SET_BIT(GPIOE->OSPEEDR, GPIO_OSPEEDER_OSPEEDR9_0);
+
+    SET_BIT(GPIOE->PUPDR, GPIO_PUPDR_PUPDR9_0);
+    CLEAR_BIT(GPIOE->PUPDR, GPIO_PUPDR_PUPDR9_1);
 
 
-    SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPBEN);
-    SET_BIT(GPIOB->CRH, GPIO_CRH_MODE13_0);
-    SET_BIT(GPIOB->CRH, GPIO_CRH_MODE13_1);
-    CLEAR_BIT(GPIOB->CRH, GPIO_CRH_CNF13_0); 
-    CLEAR_BIT(GPIOB->CRH, GPIO_CRH_CNF13_1);
-    SET_BIT(GPIOB->BSRR, GPIO_BSRR_BS13); 
+    CLEAR_BIT(GPIOE->MODER, GPIO_MODER_MODER10_1);
+    SET_BIT(GPIOE->MODER, GPIO_MODER_MODER10_0);
+
+    CLEAR_BIT(GPIOE->OTYPER, GPIO_OTYPER_OT_10);
+
+    SET_BIT(GPIOE->OSPEEDR, GPIO_OSPEEDER_OSPEEDR10_1);
+    SET_BIT(GPIOE->OSPEEDR, GPIO_OSPEEDER_OSPEEDR10_0);
+
+    SET_BIT(GPIOE->PUPDR, GPIO_PUPDR_PUPDR10_0);
+    CLEAR_BIT(GPIOE->PUPDR, GPIO_PUPDR_PUPDR10_1);
+
+    SET_BIT(GPIOE->BRR, GPIO_BRR_BR_10);
 }
 
 void debug_print(int data)
@@ -202,7 +220,7 @@ void init_uart_service()
 void led_on() 
 {
 	//GPIOC->ODR |= 0x00002000;
-    SET_BIT(GPIOC->BRR, GPIO_BRR_BR13);
+    SET_BIT(GPIOE->BRR, GPIO_BRR_BR_9);
     return 0;
 	//GPIOC->BSRR = GPIO_BSRR_BS13;
 }
@@ -210,7 +228,7 @@ void led_on()
 void led_off()
 {
 	//GPIOC->ODR &= ~0x00002000;
-    SET_BIT(GPIOC->BSRR, GPIO_BSRR_BS13);
+    SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_9);
     return 0;
 	//GPIOC->BSRR = GPIO_BSRR_BS13;
 }

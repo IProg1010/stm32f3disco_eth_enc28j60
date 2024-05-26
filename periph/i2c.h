@@ -1,7 +1,7 @@
 #ifndef I2C_H
 #define I2C_H
 
-#include "stm32f103xb.h"
+#include "stm32f303xc.h"
 
 #define ON 1
 #define OFF 0

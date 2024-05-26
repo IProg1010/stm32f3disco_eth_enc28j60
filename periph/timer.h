@@ -1,7 +1,7 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include "stm32f103xb.h"
+#include "stm32f303xc.h"
 
 #define ON 1
 #define OFF 0

@@ -1,6 +1,6 @@
 #include "usart.h"
-#include "stm32f103xb.h"
-#include "stm32f1xx.h"
+#include "stm32f303xc.h"
+#include "F3_MACROS.h"
 
 //uart init
 void usart_init(USART_TypeDef* usart_inter, usart_config* config)
@@ -129,14 +129,16 @@ USARTx_CTS
             TX - GPIOA9 ( PA9 )
         */
 
-        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPAEN);
 
-        /*PA10 Output Alternate function push-pull*/
-        WRITE_REG(GPIOA->CRH, GPIO_CRH_MODE10);
-        WRITE_REG(GPIOA->CRH, GPIO_CRH_CNF10); 
-        /*PA9 Output Alternate function push-pull*/
-        WRITE_REG(GPIOA->CRH, GPIO_CRH_MODE9);
-        WRITE_REG(GPIOA->CRH, GPIO_CRH_CNF9); 
+        /*PB13 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF13); 
+        /*PB14 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF14); 
+        /*PB15 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); */
     }
     if(addr == USART2_BASE)
     {
@@ -144,14 +146,15 @@ USARTx_CTS
             RX - GPIOA3 ( PA3 )
             TX - GPIOA2 ( PA2 )
         */
-        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPAEN);
-
-        /*PA3 Output Alternate function push-pull*/
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_MODE3);
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_CNF3); 
-        /*PA2 Output Alternate function push-pull*/
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_MODE2);
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_CNF2); 
+        /*PB13 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF13); 
+        /*PB14 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF14); 
+        /*PB15 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); */
     }
     if(addr == USART3_BASE)
     {
@@ -159,14 +162,15 @@ USARTx_CTS
             RX - GPIOB11 ( PB11 )
             TX - GPIOB10 ( PB10 )
         */
-        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPBEN);
-
-        /*PB11 Output Alternate function push-pull*/
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE11);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF11); 
-        /*PB10 Output Alternate function push-pull*/
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE10);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF10); 
+        /*PB13 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF13); 
+        /*PB14 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF14); 
+        /*PB15 Output Alternate function push-pull*/
+        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
+        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); */
     }
 }   
 

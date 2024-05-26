@@ -1,6 +1,6 @@
 #include "timer.h"
-#include "stm32f103xb.h"
-#include "stm32f1xx.h"
+#include "stm32f303xc.h"
+#include "F3_MACROS.h"
 
 extern uint32_t lwip_localtime;
 
@@ -220,7 +220,7 @@ void timer_init(TIM_TypeDef* timer_inter, timer_config* config)
         --[9]  CC3P: Capture/Compare 3 output polarity
         --[8]  CC3E: Capture/Compare 3 output enable
         --[7:6]   Reserved - Reserved
-        --[5]  CC2P: Capture/Compare 2 output polarity
+        --[5]  CC2P: gjckt Capture/Compare 2 output polarity
         --[4]  CC2E: Capture/Compare 2 output enable
         --[3:2]  Reserved - Reserved
         --[1]  CC1P: Capture/Compare 1 output polarity
@@ -242,7 +242,7 @@ void timer_init(TIM_TypeDef* timer_inter, timer_config* config)
                 trigger controller when configured in “reset mode”).
         timer_inter->PSC;
     */
-    WRITE_REG(TIM2->PSC, 1550);
+    WRITE_REG(TIM2->PSC, 5550);
     
     /*! Timer prescaler register
         --[15:0]  ARR - Prescaler value
@@ -250,7 +250,7 @@ void timer_init(TIM_TypeDef* timer_inter, timer_config* config)
         timer_inter->ARR;
     */  
 
-    WRITE_REG(TIM2->ARR, 2000);
+    WRITE_REG(TIM2->ARR, 1000);
     /*! Timer capture/compare register 1
         --[15:0]  CCR1 - Capture/Compare 1 value
                         If channel CC1 is configured as output:
@@ -314,13 +314,13 @@ void TIM2_IRQHandler(void)
         
         if(i == 0)
         {
-            SET_BIT(GPIOC->BSRR, GPIO_BSRR_BS13);
-            i++;
+            SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_10);
+            i = 1;
         }
         else
         {
-            SET_BIT(GPIOC->BRR, GPIO_BRR_BR13);
-            i--;
+            SET_BIT(GPIOE->BRR, GPIO_BRR_BR_10);
+            i = 0;
         }
         //if(tim2_count>9) tim2_count=0;
     }

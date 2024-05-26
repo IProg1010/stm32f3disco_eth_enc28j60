@@ -5,7 +5,7 @@
       {
         "name": "Debug Microcontroller",
         "cwd" : "${workspaceRoot}",
-        "device" : "STM32F103C8T6",
+        "device" : "STM32F303VCT6",
         "executable" : "${workspaceRoot}/build/eth_enj.elf",
         "type" : "cortex-debug",
         //"preLaunchTask" : "CMake: build",
@@ -15,7 +15,7 @@
         "servertype" : "stutil",
         "showDevDebugOutput" : "vscode",
         "interface": "swd",
-        "svdFile" : "${workspaceRoot}/svd/STM32F103.svd",
+        "svdFile" : "${workspaceRoot}/svd/STM32F303.svd",
         "armToolchainPath": "/usr/bin",
         "gdbPath" : "/usr/bin/gdb-multiarch"
       }

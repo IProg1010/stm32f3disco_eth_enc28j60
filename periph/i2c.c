@@ -1,10 +1,10 @@
 #include "i2c.h"
-
+#include "F3_MACROS.h"
 //spi init
 void i2c_init(I2C_TypeDef* i2c_interf, i2c_config* config)
 {
     /*! Init I2C GPIO*/
-    SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPAEN);
+    //SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPAEN);
     
     /*! Init I2C GPIO*/
     
@@ -35,8 +35,8 @@ void i2c_init(I2C_TypeDef* i2c_interf, i2c_config* config)
         --[1]   CPOL - Clock polarity
         --[0]   CPHA - Clock phase
     */
-    i2c_interf->CR1 &= ~(1 << SPI_CR1_CRCEN || 0 << SPI_CR1_DFF || 0 << SPI_CR1_RXONLY
-                        || 1 << SPI_CR1_DFF || 1 << SPI_CR1_DFF) ;
+    //i2c_interf->CR1 &= ~(1 << SPI_CR1_CRCEN || 0 << SPI_CR1_DFF || 0 << SPI_CR1_RXONLY
+    //                    || 1 << SPI_CR1_DFF || 1 << SPI_CR1_DFF) ;
 
     /*! I2C Control register2
         --[7]   TXEIE - Tx buffer empty interrupt enable
@@ -121,43 +121,22 @@ SPIx_NSS
 
     if(addr == I2C1_BASE)
     {
-        /*SPI1 pin
+        /*I2C1 pin
             SS - GPIOA4 (PA4) 
             SCK - GPIOA5 (PA5) 
             MISO - GPIOA6 (PA6)
             MOSI - GPIOA7 (PA7)
         */
-        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPAEN);
         
-        /*PA5 Output Alternate function push-pull*/
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_MODE5);
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_CNF5); 
-        /*PA6 Output Alternate function push-pull*/
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_MODE6);
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_CNF6); 
-        /*PA7 Output Alternate function push-pull*/
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_MODE7);
-        WRITE_REG(GPIOA->CRL, GPIO_CRL_CNF7); 
     }
     if(addr == I2C2_BASE)
     {
-        /*SPI2 pin
+        /*I2C2 pin
             SS - GPIOB12 (PB12)
             SCK - GPIOB13 (PB13) 
             MISO - GPIOB14 (PB14)
             MOSI - GPIOB15 (PB15)
         */
-        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPBEN);
-
-        /*PB13 Output Alternate function push-pull*/
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF13); 
-        /*PB14 Output Alternate function push-pull*/
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF14); 
-        /*PB15 Output Alternate function push-pull*/
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); 
     }
 }   
 

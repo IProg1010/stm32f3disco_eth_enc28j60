@@ -9284,6 +9284,12 @@ typedef struct
 #define RCC_CFGR_PLLMUL_2                        (0x4UL << RCC_CFGR_PLLMUL_Pos) /*!< 0x00100000 */
 #define RCC_CFGR_PLLMUL_3                        (0x8UL << RCC_CFGR_PLLMUL_Pos) /*!< 0x00200000 */
 
+#define  RCC_CFGR_PLLSRC_HSI_Div2            ((uint32_t)0x00000000)        /*!< HSI clock divided by 2 selected as PLL entry clock source */
+#define  RCC_CFGR_PLLSRC_PREDIV1             ((uint32_t)0x00010000)        /*!< PREDIV1 clock selected as PLL entry clock source */
+
+#define  RCC_CFGR_PLLXTPRE_PREDIV1           ((uint32_t)0x00000000)        /*!< PREDIV1 clock not divided for PLL entry */
+#define  RCC_CFGR_PLLXTPRE_PREDIV1_Div2      ((uint32_t)0x00020000)        /*!< PREDIV1 clock divided by 2 for PLL entry */
+
 #define RCC_CFGR_PLLMUL2                         (0x00000000U)                 /*!< PLL input clock*2 */
 #define RCC_CFGR_PLLMUL3                         (0x00040000U)                 /*!< PLL input clock*3 */
 #define RCC_CFGR_PLLMUL4                         (0x00080000U)                 /*!< PLL input clock*4 */

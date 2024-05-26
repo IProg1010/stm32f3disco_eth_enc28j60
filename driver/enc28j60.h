@@ -4,8 +4,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include "periph/spi.h"
-#include "stm32f103xb.h"
-#include "stm32f1xx.h"
+#include "stm32f303xc.h"
+
 
 #include <stdint.h>
 

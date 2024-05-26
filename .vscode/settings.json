@@ -10,7 +10,8 @@
         "autoip.h": "c",
         "tcpip.h": "c",
         "tcp_server.h": "c",
-        "lwip.h": "c"
+        "lwip.h": "c",
+        "stm32f303xc.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": false
 }

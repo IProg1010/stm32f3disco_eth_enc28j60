@@ -26,7 +26,7 @@ message("Cmake source dir" ${CMAKE_SOURCE_DIR})
 # List of source files
 set(SRC_FILES 
 	${CMAKE_SOURCE_DIR}/main.c
-	#${CMAKE_SOURCE_DIR}/system_stm32f1xx.c
+	${CMAKE_SOURCE_DIR}/system_stm32f3xx.c
 	${CMAKE_SOURCE_DIR}/startup_stm32f303xc.s
 	#${CMAKE_SOURCE_DIR}/periph/dma.c
 	${CMAKE_SOURCE_DIR}/periph/spi.c
@@ -38,6 +38,7 @@ set(SRC_FILES
 	#${CMAKE_SOURCE_DIR}/lwip_port/tcp_server_raw/tcp_server.c
 	${CMAKE_SOURCE_DIR}/lwip_port/port/ethernetif.c
 	${CMAKE_SOURCE_DIR}/lwip/src/netif/etharp.c
+	${CMAKE_SOURCE_DIR}/lwip/src/netif/slipif.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/def.c
 	#${CMAKE_SOURCE_DIR}/lwip/src/core/dhcp.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/dns.c

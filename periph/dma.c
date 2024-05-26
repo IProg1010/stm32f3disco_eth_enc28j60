@@ -1,4 +1,5 @@
 #include "dma.h"
+#include "stm32f303xc.h"
 
 //uart init
 void dma_init(DMA_TypeDef* dma_inter, DMA_Channel_TypeDef* dma_channel, dma_config* config)

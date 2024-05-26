@@ -1,7 +1,7 @@
 #ifndef DMA_H
 #define DMA_H
 
-#include "stm32f103xb.h"
+#include "stm32f303xc.h"
 
 #define ON 1
 #define OFF 0

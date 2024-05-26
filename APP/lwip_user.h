@@ -1,8 +1,8 @@
 #ifndef _LWIP_USER
 #define _LWIP_USER
 
-#include "../stm32f1xx.h"
-#include "../stm32f103xb.h"
+
+#include "stm32f303xc.h"
 
 typedef struct
 {

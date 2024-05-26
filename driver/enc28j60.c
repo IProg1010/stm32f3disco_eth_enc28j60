@@ -1,6 +1,6 @@
 #include "enc28j60.h"
 //#include "main.h"
-
+#include "F3_MACROS.h"
 //#include "stm32f103xb.h"
 #include <stdint.h>
 #include <stdbool.h>
@@ -36,13 +36,13 @@ void enableChip()
 {
 	//HAL_GPIO_WritePin(PORT_CS,PIN_CS,GPIO_PIN_RESET);
 
-   SET_BIT(GPIOB->BRR, GPIO_BRR_BR13);
+   SET_BIT(GPIOA->BRR, GPIO_BRR_BR_4);
 }
 
 void disableChip()
 {
 	//HAL_GPIO_WritePin(PORT_CS,PIN_CS,GPIO_PIN_SET);
-   SET_BIT(GPIOB->BSRR, GPIO_BSRR_BS13);
+   SET_BIT(GPIOA->BSRR, GPIO_BSRR_BS_4);
 }
 
 void ENC28_SetPhyInterface(const spi_config* spi)
@@ -60,7 +60,7 @@ uint8_t ENC28_readOp(uint8_t oper, uint8_t addr)
    if (addr & 0x80)
    {
       //HAL_SPI_Transmit(&hspi, spiData, 1, 100);
-      //spi_write(SPI1_BASE, spiData, 1);
+      spi_write(SPI1_BASE, spiData, 1);
       spi_read(SPI1_BASE, &spiData[1], 1);
       //HAL_SPI_Receive(&hspi, &spiData[1], 1, 100);
    }
@@ -136,119 +136,119 @@ uint8_t ENC28_readPhyByte(uint8_t addr)
 
 uint8_t ENC28J60_Init(const uint8_t *macaddr)
 {
-   /* in Arduino lib this function is called with a buffer size, mac address and CS pin
-	 * this buffer does not seem to be used anywhere local
+	/* in Arduino lib this function is called with a buffer size, mac address and CS pin
+		* this buffer does not seem to be used anywhere local
 	uint8_t spiData[2];
 
 	*/
-   //bufferSize = sizeof(gPB); // sets up read buffer sise
+	//bufferSize = sizeof(gPB); // sets up read buffer sise
 
-   // (1): Disable the chip CS pin
+	// (1): Disable the chip CS pin
 
-   //init cs pin 
-   /*PB0 Output function push-pull*/
+	//init cs pin 
+	/*PA4 Output function push-pull*/
 
-   /*SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPBEN);
-   SET_BIT(GPIOB->CRL, GPIO_CRL_MODE3_0);
-   SET_BIT(GPIOB->CRL, GPIO_CRL_MODE3_1);
-   CLEAR_BIT(GPIOB->CRL, GPIO_CRL_CNF3_0); 
-   CLEAR_BIT(GPIOB->CRL, GPIO_CRL_CNF3_1);*/ 
+	SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOAEN);
 
-   SET_BIT(RCC->APB2ENR, RCC_APB2ENR_IOPBEN);
-   SET_BIT(GPIOB->CRH, GPIO_CRH_MODE13_0);
-   SET_BIT(GPIOB->CRH, GPIO_CRH_MODE13_1);
-   CLEAR_BIT(GPIOB->CRH, GPIO_CRH_CNF13_0); 
-   CLEAR_BIT(GPIOB->CRH, GPIO_CRH_CNF13_1);
-   //SET_BIT(GPIOB->BSRR, GPIO_BSRR_BS13);
+	CLEAR_BIT(GPIOA->MODER, GPIO_MODER_MODER4_1);
+	SET_BIT(GPIOA->MODER, GPIO_MODER_MODER4_0);
 
-   disableChip();
+	CLEAR_BIT(GPIOA->OTYPER, GPIO_OTYPER_OT_4);
 
-   spi_init(SPI1_BASE, 0);
-   spi_enable(SPI1_BASE, 1);
-   //HAL_Delay(1);
-   //delay(1);
+	SET_BIT(GPIOA->OSPEEDR, GPIO_OSPEEDER_OSPEEDR4_1);
+	SET_BIT(GPIOA->OSPEEDR, GPIO_OSPEEDER_OSPEEDR4_0);
 
-   // (2): Perform soft reset to the ENC28J60 module
-   ENC28_writeOp(ENC28J60_SOFT_RESET, 0, ENC28J60_SOFT_RESET);
-   //HAL_Delay(2);
-   //delay(2);
+	CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR4_0);
+	SET_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR4_1);
+
+	disableChip();
+
+	spi_init(SPI1_BASE, 0);
+	spi_enable(SPI1_BASE, 1);
+	//HAL_Delay(1);
+	//delay(1);
+
+	// (2): Perform soft reset to the ENC28J60 module
+	ENC28_writeOp(ENC28J60_SOFT_RESET, 0, ENC28J60_SOFT_RESET);
+	//HAL_Delay(2);
+	//delay(2);
 
 
-   // (3): Wait untill Clock is ready
-   while (!ENC28_readOp(ENC28J60_READ_CTRL_REG, ESTAT) & ESTAT_CLKRDY)
-      ;
+	// (3): Wait untill Clock is ready
+	while (!ENC28_readOp(ENC28J60_READ_CTRL_REG, ESTAT) & ESTAT_CLKRDY)
+		;
 
-   // (4): Initialise RX and TX buffer size
-   ENC28_writeReg16(ERXST, RXSTART_INIT);
-   ENC28_writeReg16(ERXRDPT, RXSTART_INIT);
-   ENC28_writeReg16(ERXND, RXSTOP_INIT);
-   ENC28_writeReg16(ETXST, TXSTART_INIT);
-   ENC28_writeReg16(ETXND, TXSTOP_INIT);
+	// (4): Initialise RX and TX buffer size
+	ENC28_writeReg16(ERXST, RXSTART_INIT);
+	ENC28_writeReg16(ERXRDPT, RXSTART_INIT);
+	ENC28_writeReg16(ERXND, RXSTOP_INIT);
+	ENC28_writeReg16(ETXST, TXSTART_INIT);
+	ENC28_writeReg16(ETXND, TXSTOP_INIT);
 
-   //ENC28J60_enableBroadcast(1);
-   // Arduino lib set this here
-   // Stretch pulses for LED, LED_A=Link, LED_B=activity
-   ENC28_writePhy(PHLCON, 0x476);
+	//ENC28J60_enableBroadcast(1);
+	// Arduino lib set this here
+	// Stretch pulses for LED, LED_A=Link, LED_B=activity
+	ENC28_writePhy(PHLCON, 0x476);
 
-   // (5): Receive buffer filters
-   ENC28_writeReg8(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_PMEN | ERXFCON_BCEN);
+	// (5): Receive buffer filters
+	ENC28_writeReg8(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_PMEN | ERXFCON_BCEN);
 
-   // additional Arduino setup
-   ENC28_writeReg16(EPMM0, 0x303f); // pattern match filter
-   ENC28_writeReg16(EPMCS, 0xf7f9); // pattern match checksum filter
+	// additional Arduino setup
+	ENC28_writeReg16(EPMM0, 0x303f); // pattern match filter
+	ENC28_writeReg16(EPMCS, 0xf7f9); // pattern match checksum filter
 
-   // (6): MAC Control Register 1
-   //	ENC28_writeReg8(MACON1, MACON1_MARXEN|MACON1_TXPAUS|MACON1_RXPAUS|MACON1_PASSALL);
-   // changed to
-   ENC28_writeReg8(MACON1, MACON1_MARXEN);
+	// (6): MAC Control Register 1
+	//	ENC28_writeReg8(MACON1, MACON1_MARXEN|MACON1_TXPAUS|MACON1_RXPAUS|MACON1_PASSALL);
+	// changed to
+	ENC28_writeReg8(MACON1, MACON1_MARXEN);
 
-   // (7): MAC Control Register 3
-   ENC28_writeOp(ENC28J60_BIT_FIELD_SET, MACON3,
-                 MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
+	// (7): MAC Control Register 3
+	ENC28_writeOp(ENC28J60_BIT_FIELD_SET, MACON3,
+					MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
 
-   // (8): NON/Back to back gap
-   ENC28_writeReg16(MAIPG, 0x0C12); // NonBackToBack gap
-   ENC28_writeReg8(MABBIPG, 0x12);  // BackToBack gap
+	// (8): NON/Back to back gap
+	ENC28_writeReg16(MAIPG, 0x0C12); // NonBackToBack gap
+	ENC28_writeReg8(MABBIPG, 0x12);  // BackToBack gap
 
-   // (9): Set Maximum framelenght
-   ENC28_writeReg16(MAMXFL, MAX_FRAMELEN); // Set Maximum frame length (any packet bigger will be discarded)
+	// (9): Set Maximum framelenght
+	ENC28_writeReg16(MAMXFL, MAX_FRAMELEN); // Set Maximum frame length (any packet bigger will be discarded)
 
-   // (10): Set the MAC address of the device
-   ENC28_writeReg8(MAADR5, macaddr[0]);
-   ENC28_writeReg8(MAADR4, macaddr[1]);
-   ENC28_writeReg8(MAADR3, macaddr[2]);
-   ENC28_writeReg8(MAADR2, macaddr[3]);
-   ENC28_writeReg8(MAADR1, macaddr[4]);
-   ENC28_writeReg8(MAADR0, macaddr[5]);
+	// (10): Set the MAC address of the device
+	ENC28_writeReg8(MAADR5, macaddr[0]);
+	ENC28_writeReg8(MAADR4, macaddr[1]);
+	ENC28_writeReg8(MAADR3, macaddr[2]);
+	ENC28_writeReg8(MAADR2, macaddr[3]);
+	ENC28_writeReg8(MAADR1, macaddr[4]);
+	ENC28_writeReg8(MAADR0, macaddr[5]);
 
-   /* 
+	/* 
 		could back check the MADDR registers and see if they are
 		loaded with the correct MAC
 	*/
 
-   //**********Advanced Initialisations************//
-   // (1): Initialise PHY layer registers
-   //	ENC28_writePhy(PHLCON, PHLCON_LED);
-   ENC28_writePhy(PHCON2, PHCON2_HDLDIS);
-   ENC28_writePhy(PHLCON, PHLCON_LACFG2|PHLCON_LBCFG2|PHLCON_LBCFG1|PHLCON_LBCFG0|PHLCON_LFRQ0|PHLCON_STRCH);
+	//**********Advanced Initialisations************//
+	// (1): Initialise PHY layer registers
+	//	ENC28_writePhy(PHLCON, PHLCON_LED);
+	ENC28_writePhy(PHCON2, PHCON2_HDLDIS);
+	ENC28_writePhy(PHLCON, PHLCON_LACFG2|PHLCON_LBCFG2|PHLCON_LBCFG1|PHLCON_LBCFG0|PHLCON_LFRQ0|PHLCON_STRCH);
 
-   // (2): Enable Rx interrupt line
-   ENC28_setBank(ECON1);
+	// (2): Enable Rx interrupt line
+	ENC28_setBank(ECON1);
 
-   ENC28_writeOp(ENC28J60_BIT_FIELD_SET, EIE, EIE_INTIE | EIE_PKTIE);
-   ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
+	ENC28_writeOp(ENC28J60_BIT_FIELD_SET, EIE, EIE_INTIE | EIE_PKTIE);
+	ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
 
-   // not used in Arduino code
-   // ENC28_writeOp(ENC28J60_BIT_FIELD_SET, EIR, EIR_PKTIF);
+	// not used in Arduino code
+	// ENC28_writeOp(ENC28J60_BIT_FIELD_SET, EIR, EIR_PKTIF);
 
-   uint8_t rev = ENC28_readReg8(EREVID);
-   // microchip forgot to step the number on the silicon when they
-   // released the revision B7. 6 is now rev B7. We still have
-   // to see what they do when they release B8. At the moment
-   // there is no B8 out yet
-   if (rev > 5)
-      ++rev; // implement arduino's revision value return.
-   return rev;
+	uint8_t rev = ENC28_readReg8(EREVID);
+	// microchip forgot to step the number on the silicon when they
+	// released the revision B7. 6 is now rev B7. We still have
+	// to see what they do when they release B8. At the moment
+	// there is no B8 out yet
+	if (rev > 5)
+		++rev; // implement arduino's revision value return.
+	return rev;
 }
 
 bool ENC28J60_isLinkUp(void)

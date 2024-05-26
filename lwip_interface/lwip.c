@@ -36,13 +36,13 @@
 #include "ethernetif.h"
 //#include "main.h"
 #include "lwip.h"
-#include "stm32f103xb.h"
+#include "stm32f303xc.h"
 #include <stdio.h>
 
 /* Private typedef -----------------------------------------------------------*/
 #define MAX_DHCP_TRIES 4
 
-#define USE_LCD 1
+//#define USE_LCD 1
 
 #define DEBUG(...)	
 /* Private define ------------------------------------------------------------*/
@@ -100,10 +100,10 @@ void LwIP_Init(void)
 #endif
 
     /* Initializes the dynamic memory heap defined by MEM_SIZE.*/
-    mem_init();
+    //mem_init();
 
     /* Initializes the memory pools defined by MEMP_NUM_x.*/
-    memp_init();
+    //memp_init();
 
 #ifdef USE_DHCP
     ipaddr.addr = 0;
