@@ -54,6 +54,8 @@
 #include <lwip/stats.h>
 #include <lwip/snmp.h>
 #include "netif/etharp.h"
+#include "stm32f303xc.h"
+#include "F3_MACROS.h"
 //#include "netif/ppp_oe.h"
 
 /* Define those to better describe your network interface. */
@@ -65,7 +67,7 @@ uint8_t mymac[] = {0x70, 0x69, 0x69, 0x2D, 0x30, 0x31};
 u8_t rxbuf[1520 * 2 + 1];
 u8_t txbuf[1520 * 2];
 
-extern uint8_t mymac[];
+//extern uint8_t mymac[];
 
 /**
  * Helper struct to hold private data used to operate your ethernet interface.
@@ -159,7 +161,7 @@ low_level_output(struct netif *netif, struct pbuf *p)
   pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
 #endif
 
-  LINK_STATS_INC(link.xmit);
+    //LINK_STATS_INC(link.xmit);
 
   return ERR_OK;
 }
@@ -183,8 +185,14 @@ low_level_input(struct netif *netif)
      variable. */
   len = ENC28J60_packetReceive(rxbuf, sizeof(rxbuf) - 1);
   if (len == 0)
+  {
+    SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_13);
+            
     return NULL;
-
+  }
+  else{
+    SET_BIT(GPIOE->BRR, GPIO_BRR_BR_13);
+  }
 #if ETH_PAD_SIZE
   len += ETH_PAD_SIZE; /* allow room for Ethernet padding */
 #endif
@@ -196,6 +204,18 @@ low_level_input(struct netif *netif)
 
   if (p != NULL)
   {
+    //SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_13);
+        //static int i = 0;
+        //if(i == 0)
+        {
+            //SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_13);
+            //i = 1;
+        }
+        //else
+        {
+        //    SET_BIT(GPIOE->BRR, GPIO_BRR_BR_12);
+        //    i = 0;
+        }
 
 #if ETH_PAD_SIZE
     pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
@@ -213,7 +233,7 @@ low_level_input(struct netif *netif)
        * actually received size. In this case, ensure the tot_len member of the
        * pbuf is the sum of the chained pbuf len members.
        */
-      memcpy(q->payload, rxbuf, q->len);
+      //memcpy(q->payload, rxbuf, q->len);
       memcpy((u8_t *)q->payload, (u8_t *)&rxbuf[i], q->len);
       i = i + q->len;
     }
@@ -223,13 +243,14 @@ low_level_input(struct netif *netif)
     pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
 #endif
 
-    LINK_STATS_INC(link.recv);
+    //LINK_STATS_INC(link.recv);
   }
   else
   {
+    SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_14);
     //drop packet();
-    LINK_STATS_INC(link.memerr);
-    LINK_STATS_INC(link.drop);
+    //LINK_STATS_INC(link.memerr);
+    //LINK_STATS_INC(link.drop);
   }
 
   return p;
@@ -247,44 +268,91 @@ low_level_input(struct netif *netif)
 /*static*/ void
 ethernetif_input(struct netif *netif)
 {
-  //struct ethernetif *ethernetif;
-  struct eth_hdr *ethhdr;
-  struct pbuf *p;
+    //struct ethernetif *ethernetif;
+    struct eth_hdr *ethhdr;
+    struct pbuf *p;
 
-  //ethernetif = netif->state;
+    //ethernetif = netif->state;
 
-  /* move received packet into a new pbuf */
-  p = low_level_input(netif);
-  /* no packet could be read, silently ignore this */
-  if (p == NULL)
-    return;
-  /* points to packet payload, which starts with an Ethernet header */
-  ethhdr = p->payload;
+    /* move received packet into a new pbuf */
+    p = low_level_input(netif);
+    /* no packet could be read, silently ignore this */
+    if (p == NULL)
+        return;
+    /* points to packet payload, which starts with an Ethernet header */
+    ethhdr = p->payload;
 
-  switch (htons(ethhdr->type))
-  {
-  /* IP or ARP packet? */
-  case ETHTYPE_IP:
-  case ETHTYPE_ARP:
-#if PPPOE_SUPPORT
-  /* PPPoE packet? */
-  case ETHTYPE_PPPOEDISC:
-  case ETHTYPE_PPPOE:
-#endif /* PPPOE_SUPPORT */
-    /* full packet send to tcpip_thread to process */
+
     if (netif->input(p, netif) != ERR_OK)
     {
       LWIP_DEBUGF(NETIF_DEBUG, ("ethernetif_input: IP input error\n"));
       pbuf_free(p);
       p = NULL;
+       
+        //static int i = 0;
+        //if(i == 0)
+        {
+            SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_15);
+        //    i = 1;
+        }
+        //else
+        //{
+        //    SET_BIT(GPIOE->BRR, GPIO_BRR_BR_11);
+        //    i = 0;
+       // }
     }
+    else
+    {
+        //static int i = 0;
+        //if(i == 0)
+        //{
+        //    SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_12);
+        //    i = 1;
+        //}
+        //else
+        {
+            //SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_16);
+        //    i = 0;
+        }
+    }
+
+    /*switch (htons(ethhdr->type))
+    {
+    IP or ARP packet? 
+    case ETHTYPE_IP:
+    case ETHTYPE_ARP:
+    #if PPPOE_SUPPORT
+    /* PPPoE packet? 
+    case ETHTYPE_PPPOEDISC:
+    case ETHTYPE_PPPOE:
+    #endif /* PPPOE_SUPPORT 
+        /* full packet send to tcpip_thread to process 
+        if (netif->input(p, netif) != ERR_OK)
+        {
+        LWIP_DEBUGF(NETIF_DEBUG, ("ethernetif_input: IP input error\n"));
+        pbuf_free(p);
+        p = NULL;
+        }
+
+        //static int i = 0;
+        //if(i == 0)
+        //{
+            //SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_11);
+        //    i = 1;
+       // }
+       // else
+       // {
+       //     SET_BIT(GPIOE->BRR, GPIO_BRR_BR_11);
+       //     i = 0;
+       // }
+
     break;
 
   default:
     pbuf_free(p);
     p = NULL;
     break;
-  }
+  }*/
 }
 
 /**
@@ -322,9 +390,9 @@ err_t ethernetif_init(struct netif *netif)
    * The last argument should be replaced with your link speed, in units
    * of bits per second.
    */
-  NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, LINK_SPEED_OF_YOUR_NETIF_IN_BPS);
+  //NETIF_INIT_SNMP(netif, snmp_ifType_ethernet_csmacd, LINK_SPEED_OF_YOUR_NETIF_IN_BPS);
 
-  netif->state = ethernetif;
+  //netif->state = ethernetif;
   netif->name[0] = IFNAME0;
   netif->name[1] = IFNAME1;
   /* We directly use etharp_output() here to save a function call.
@@ -334,7 +402,7 @@ err_t ethernetif_init(struct netif *netif)
   netif->output = etharp_output;
   netif->linkoutput = low_level_output;
 
-  ethernetif->ethaddr = (struct eth_addr *)&(netif->hwaddr[0]);
+  //ethernetif->ethaddr = (struct eth_addr *)&(netif->hwaddr[0]);
 
   /* initialize the hardware */
   low_level_init(netif);

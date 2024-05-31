@@ -37,6 +37,8 @@
 //#include "main.h"
 #include "lwip.h"
 #include "stm32f303xc.h"
+#include "F3_MACROS.h"
+
 #include <stdio.h>
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,7 +68,7 @@ uint32_t IPaddress = 0;
 	#define 	IP_ADDR0				192
 	#define 	IP_ADDR1				168
 	#define 	IP_ADDR2				1
-	#define 	IP_ADDR3				118
+	#define 	IP_ADDR3				40
 	
 	#define 	NETMASK_ADDR0		255
 	#define 	NETMASK_ADDR1		255
@@ -132,14 +134,28 @@ void LwIP_Init(void)
     /*  Registers the default network interface.*/
     netif_set_default(&gnetif);
 
+    
+    if (netif_is_link_up(&gnetif))
+    {
+        /* When the netif is fully configured this function must be called */
+        netif_set_up(&gnetif);
+        SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_11);
+    }
+    else
+    {
+        /* When the netif link is down this function must be called */
+        netif_set_down(&gnetif);
+        SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_12);
+    }
+    
     //if (EthStatus == (ETH_INIT_FLAG | ETH_LINK_FLAG))
     if (1)
     {
         /* Set Ethernet link flag */
-        gnetif.flags |= NETIF_FLAG_LINK_UP;
+        //gnetif.flags |= NETIF_FLAG_LINK_UP;
 
         /* When the netif is fully configured this function must be called */
-        netif_set_up(&gnetif);
+        //netif_set_up(&gnetif);
 
 #ifdef USE_DHCP
         DHCP_state = DHCP_START;
@@ -168,6 +184,7 @@ void LwIP_Pkt_Handle(void)
 {
     /* Read a received packet from the Ethernet buffers and send it to the lwIP for handling */
     ethernetif_input(&gnetif);
+        
 }
 
 /**
@@ -179,7 +196,7 @@ void LwIP_Periodic_Handle(uint32_t localtime)
 {
 #if LWIP_TCP
     /* TCP periodic process every 250 ms */
-    if (localtime - TCPTimer >= TCP_TMR_INTERVAL)
+    //if (localtime - TCPTimer >= TCP_TMR_INTERVAL)
     {
         TCPTimer = localtime;
         tcp_tmr();
@@ -187,10 +204,21 @@ void LwIP_Periodic_Handle(uint32_t localtime)
 #endif
 
     /* ARP periodic process every 5s */
-    if ((localtime - ARPTimer) >= ARP_TMR_INTERVAL)
+    if (localtime-ARPTimer >= 20)// >= ARP_TMR_INTERVAL)
     {
         ARPTimer = localtime;
         etharp_tmr();
+        /*static int i = 0;
+        if(i == 0)
+        {
+            SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_11);
+            i = 1;
+        }
+        else
+        {
+            SET_BIT(GPIOE->BRR, GPIO_BRR_BR_11);
+            i = 0;
+        }*/
     }
 
 #ifdef USE_DHCP

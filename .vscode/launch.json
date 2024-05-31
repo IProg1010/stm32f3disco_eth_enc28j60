@@ -3,17 +3,17 @@
     "configurations" : 
     [
       {
-        "name": "Debug Microcontroller",
+        "name": "Debug (ST-LINK)",
         "cwd" : "${workspaceRoot}",
         "device" : "STM32F303VCT6",
         "executable" : "${workspaceRoot}/build/eth_enj.elf",
         "type" : "cortex-debug",
         //"preLaunchTask" : "CMake: build",
-        //"preRestartCommands" : [ "load", "enable breakpoint", "monitor reset" ],
+        "preRestartCommands" : [ "enable breakpoint", "monitor reset" ],
         "request" : "launch",
         "runToEntryPoint" : "main",
         "servertype" : "stutil",
-        "showDevDebugOutput" : "vscode",
+        //"showDevDebugOutput" : "raw",
         "interface": "swd",
         "svdFile" : "${workspaceRoot}/svd/STM32F303.svd",
         "armToolchainPath": "/usr/bin",

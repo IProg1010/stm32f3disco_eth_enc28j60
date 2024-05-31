@@ -47,7 +47,7 @@
  * NO_SYS_NO_TIMERS==1: Drop support for sys_timeout when NO_SYS==1
  * Mainly for compatibility to old versions.
  */
-#define NO_SYS_NO_TIMERS        0
+#define NO_SYS_NO_TIMERS        1
 
 /* ---------- Memory options ---------- */
 /* MEM_ALIGNMENT: should be set to the alignment of the CPU for which
@@ -65,7 +65,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define MEMP_NUM_PBUF           10
 /* MEMP_NUM_UDP_PCB: the number of UDP protocol control blocks. One
    per active UDP "connection". */
-#define MEMP_NUM_UDP_PCB        0
+#define MEMP_NUM_UDP_PCB        6
 /* MEMP_NUM_TCP_PCB: the number of simulatenously active TCP
    connections. */
 #define MEMP_NUM_TCP_PCB        10
@@ -125,7 +125,7 @@ a lot of data that needs to be copied, this should be set high. */
 
 
 /* ---------- UDP options ---------- */
-#define LWIP_UDP                0
+#define LWIP_UDP                1
 #define UDP_TTL                 255
 
 

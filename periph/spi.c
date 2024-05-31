@@ -57,7 +57,7 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
     SET_BIT(spi_interf->CR1, SPI_CR1_LSBFIRST);
     //Baud rate control
     SET_BIT(spi_interf->CR1, SPI_CR1_BR_0);
-    CLEAR_BIT(spi_interf->CR1, SPI_CR1_BR_1);
+    SET_BIT(spi_interf->CR1, SPI_CR1_BR_1);
     CLEAR_BIT(spi_interf->CR1, SPI_CR1_BR_2);
     
     //Master selection

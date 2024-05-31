@@ -38,7 +38,7 @@ set(SRC_FILES
 	#${CMAKE_SOURCE_DIR}/lwip_port/tcp_server_raw/tcp_server.c
 	${CMAKE_SOURCE_DIR}/lwip_port/port/ethernetif.c
 	${CMAKE_SOURCE_DIR}/lwip/src/netif/etharp.c
-	${CMAKE_SOURCE_DIR}/lwip/src/netif/slipif.c
+	#${CMAKE_SOURCE_DIR}/lwip/src/netif/slipif.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/def.c
 	#${CMAKE_SOURCE_DIR}/lwip/src/core/dhcp.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/dns.c
@@ -54,7 +54,7 @@ set(SRC_FILES
 	${CMAKE_SOURCE_DIR}/lwip/src/core/tcp_out.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/tcp.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/timers.c
-	#${CMAKE_SOURCE_DIR}/lwip/src/core/udp.c
+	${CMAKE_SOURCE_DIR}/lwip/src/core/udp.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/ipv4/autoip.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/ipv4/icmp.c
 	${CMAKE_SOURCE_DIR}/lwip/src/core/ipv4/igmp.c

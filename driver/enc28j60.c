@@ -16,8 +16,8 @@ static uint8_t waitgwmac; // Bitwise flags of gateway router status - see below 
 #define WGW_REFRESHING 4       // Refreshing but already have gateway MAC
 #define WGW_ACCEPT_ARP_REPLY 8 // Accept an ARP reply
 
-uint16_t delaycnt = 0; //request gateway ARP lookup
-
+uint32_t delaycnt = 0; //request gateway ARP lookup
+extern uint32_t lwip_localtime;
 /* 
 	in the C++ land of arduino buffer[] resolves through defines and pointers
 	to the following allocation gPB which is defined in dchp.cpp
@@ -31,6 +31,14 @@ uint16_t delaycnt = 0; //request gateway ARP lookup
 #define PIN_CS			GPIO_PIN_4
 
 static uint8_t Enc28_Bank;
+
+void del()
+{
+	//HAL_GPIO_WritePin(PORT_CS,PIN_CS,GPIO_PIN_RESET);
+
+	delaycnt = lwip_localtime;
+   	while((lwip_localtime-delaycnt) < 1){}
+}
 
 void enableChip()
 {
@@ -117,7 +125,7 @@ void ENC28_setBank(uint8_t addr)
 void ENC28_writePhy(uint8_t addr, uint16_t data)
 {
    ENC28_writeReg8(MIREGADR, addr);
-   ENC28_writeReg16(MIWR, data);
+   ENC28_writeReg16(MIWRL, data);
    while (ENC28_readReg8(MISTAT) & MISTAT_BUSY)
       ;
 }
@@ -166,52 +174,55 @@ uint8_t ENC28J60_Init(const uint8_t *macaddr)
 	spi_init(SPI1_BASE, 0);
 	spi_enable(SPI1_BASE, 1);
 	//HAL_Delay(1);
-	//delay(1);
+	delay(1);
+	//del();
 
 	// (2): Perform soft reset to the ENC28J60 module
 	ENC28_writeOp(ENC28J60_SOFT_RESET, 0, ENC28J60_SOFT_RESET);
 	//HAL_Delay(2);
-	//delay(2);
-
+	delay(1);
+	//del();
 
 	// (3): Wait untill Clock is ready
 	while (!ENC28_readOp(ENC28J60_READ_CTRL_REG, ESTAT) & ESTAT_CLKRDY)
 		;
 
 	// (4): Initialise RX and TX buffer size
-	ENC28_writeReg16(ERXST, RXSTART_INIT);
-	ENC28_writeReg16(ERXRDPT, RXSTART_INIT);
-	ENC28_writeReg16(ERXND, RXSTOP_INIT);
-	ENC28_writeReg16(ETXST, TXSTART_INIT);
-	ENC28_writeReg16(ETXND, TXSTOP_INIT);
+	ENC28_writeReg16(ERXSTL, RXSTART_INIT);
+	ENC28_writeReg16(ERXRDPTL, RXSTART_INIT);
+	ENC28_writeReg16(ERXNDL, RXSTOP_INIT);
+	ENC28_writeReg16(ETXSTL, TXSTART_INIT);
+	ENC28_writeReg16(ETXNDL, TXSTOP_INIT);
 
 	//ENC28J60_enableBroadcast(1);
 	// Arduino lib set this here
 	// Stretch pulses for LED, LED_A=Link, LED_B=activity
-	ENC28_writePhy(PHLCON, 0x476);
+	//ENC28_writePhy(PHLCON, 0x476);
 
 	// (5): Receive buffer filters
-	ENC28_writeReg8(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_PMEN | ERXFCON_BCEN);
+	ENC28_writeReg8(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_BCEN);
 
 	// additional Arduino setup
-	ENC28_writeReg16(EPMM0, 0x303f); // pattern match filter
-	ENC28_writeReg16(EPMCS, 0xf7f9); // pattern match checksum filter
+	//ENC28_writeReg16(EPMM0, 0x303f); // pattern match filter
+	//ENC28_writeReg16(EPMCS, 0xf7f9); // pattern match checksum filter
 
 	// (6): MAC Control Register 1
 	//	ENC28_writeReg8(MACON1, MACON1_MARXEN|MACON1_TXPAUS|MACON1_RXPAUS|MACON1_PASSALL);
 	// changed to
-	ENC28_writeReg8(MACON1, MACON1_MARXEN);
+	//ENC28_writeReg8(MACON2, MACON1_MARXEN);
+	ENC28_writeReg8(MACON1, MACON1_MARXEN | MACON1_TXPAUS | MACON1_RXPAUS);
+	//ENC28_writeReg8(MACON2, 0x00);
 
 	// (7): MAC Control Register 3
-	ENC28_writeOp(ENC28J60_BIT_FIELD_SET, MACON3,
-					MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN);
+	ENC28_writeReg8(MACON3, MACON3_PADCFG0 | MACON3_TXCRCEN | MACON3_FRMLNEN|MACON3_FULDPX);
+	//ENC28_writeReg8(MACON4, MACON4_DEFER);
 
 	// (8): NON/Back to back gap
-	ENC28_writeReg16(MAIPG, 0x0C12); // NonBackToBack gap
-	ENC28_writeReg8(MABBIPG, 0x12);  // BackToBack gap
+	ENC28_writeReg16(MAIPGL, 0x0C12); // NonBackToBack gap
+	ENC28_writeReg8(MABBIPG, 0x15);  // BackToBack gap
 
 	// (9): Set Maximum framelenght
-	ENC28_writeReg16(MAMXFL, MAX_FRAMELEN); // Set Maximum frame length (any packet bigger will be discarded)
+	ENC28_writeReg16(MAMXFLL, MAX_FRAMELEN); // Set Maximum frame length (any packet bigger will be discarded)
 
 	// (10): Set the MAC address of the device
 	ENC28_writeReg8(MAADR5, macaddr[0]);
@@ -230,7 +241,9 @@ uint8_t ENC28J60_Init(const uint8_t *macaddr)
 	// (1): Initialise PHY layer registers
 	//	ENC28_writePhy(PHLCON, PHLCON_LED);
 	ENC28_writePhy(PHCON2, PHCON2_HDLDIS);
-	ENC28_writePhy(PHLCON, PHLCON_LACFG2|PHLCON_LBCFG2|PHLCON_LBCFG1|PHLCON_LBCFG0|PHLCON_LFRQ0|PHLCON_STRCH);
+	ENC28_writePhy(PHLCON, PHLCON_LACFG3| // настраиваем светодиодики
+        PHLCON_LBCFG2|PHLCON_LBCFG1|PHLCON_LBCFG0|
+        PHLCON_LFRQ0|PHLCON_STRCH);
 
 	// (2): Enable Rx interrupt line
 	ENC28_setBank(ECON1);
@@ -246,9 +259,12 @@ uint8_t ENC28J60_Init(const uint8_t *macaddr)
 	// released the revision B7. 6 is now rev B7. We still have
 	// to see what they do when they release B8. At the moment
 	// there is no B8 out yet
-	if (rev > 5)
+	if (rev > 1){
 		++rev; // implement arduino's revision value return.
-	return rev;
+	
+    	SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_14);
+	}
+	return 0;
 }
 
 bool ENC28J60_isLinkUp(void)
@@ -286,10 +302,10 @@ static void ENC28_writeBuf(uint8_t *data, uint16_t len)
 
    //	spiData[1] = 0xFF;
    //	HAL_SPI_Transmit(&hspi, &spiData[1], 1, 100);
-   spi_write(SPI1_BASE, spiData, 1);
+   //spi_write(SPI1_BASE, spiData[1], 1);
 
    //HAL_SPI_Transmit(&hspi, data, len, 100);
-   spi_write(SPI1_BASE, spiData, 1);
+   spi_write(SPI1_BASE, data, len);
 
    // disable chip
    disableChip();
@@ -300,7 +316,7 @@ void ENC28_packetSend(uint8_t *buf, uint16_t len)
 {
    uint8_t retry = 0;
 
-   while (1)
+   /*while (1)
    {
       // latest errata sheet: DS80349C
       // always reset transmit logic (Errata Issue 12)
@@ -344,7 +360,20 @@ void ENC28_packetSend(uint8_t *buf, uint16_t len)
       break;
 
       //retry++; // from Arduino enc28j60.cpp
-   }
+   }*/
+   while(!ENC28_readOp(ENC28J60_READ_CTRL_REG,ECON1)&ECON1_TXRTS)
+	{
+		if(ENC28_readReg8(EIR)&EIR_TXERIF)
+		{
+			ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON1,ECON1_TXRST);
+			ENC28_writeOp(ENC28J60_BIT_FIELD_CLR, ECON1,ECON1_TXRST);
+		}
+	}
+	ENC28_writeReg16(EWRPTL, TXSTART_INIT);
+	ENC28_writeReg16(ETXNDL, TXSTART_INIT+len);
+	ENC28_writeBuf((uint8_t*)"\x00", 1);
+	ENC28_writeBuf(buf, len);
+	ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON1,ECON1_TXRTS);
 }
 
 void readBuf(uint8_t *data, uint16_t len)
@@ -359,7 +388,7 @@ void readBuf(uint8_t *data, uint16_t len)
       //HAL_SPI_Transmit(&hspi, spiData, 1, 100);
       spi_write(SPI1_BASE, spiData, 1);
       //HAL_SPI_Receive(&hspi, data, len, 100);
-      spi_read(SPI1_BASE, spiData, len);
+      spi_read(SPI1_BASE, data, len);
    }
    disableChip();
 }
@@ -370,42 +399,54 @@ uint16_t ENC28J60_packetReceive(uint8_t *buf, int max_len)
    static bool unreleasedPacket = false;
    uint16_t len = 0;
 
-   if (unreleasedPacket)
-   {
-      if (gNextPacketPtr == 0)
-         ENC28_writeReg16(ERXRDPT, RXSTOP_INIT);
-      else
-         ENC28_writeReg16(ERXRDPT, gNextPacketPtr - 1);
-      unreleasedPacket = false;
-   }
+   //if (unreleasedPacket)
+   //{
+   //   if (gNextPacketPtr == 0)
+   //      ENC28_writeReg16(ERXRDPT, RXSTOP_INIT);
+   //   else
+   //      ENC28_writeReg16(ERXRDPT, gNextPacketPtr - 1);
+   //   unreleasedPacket = false;
+  	// }
 
-   if (ENC28_readReg8(EPKTCNT) > 0)
-   {
-      ENC28_writeReg16(ERDPT, gNextPacketPtr);
+	if (ENC28_readReg8(EPKTCNT) > 0)
+	{
 
-      struct
-      {
-         uint16_t nextPacket;
-         uint16_t byteCount;
-         uint16_t status;
-      } header;
+    	ENC28_writeReg16(ERDPTL, gNextPacketPtr);
 
-      readBuf((uint8_t *)&header, sizeof header);
+		typedef struct
+		{
+			uint16_t nextPacket;
+			uint16_t byteCount;
+			uint16_t status;
+		} header;
 
-      gNextPacketPtr = header.nextPacket;
-      len = header.byteCount - 4; //remove the CRC count
-      if (len > max_len - 1)
-         len = max_len - 1;
-      if ((header.status & 0x80) == 0)
-         len = 0;
-      else
-         readBuf(buf, len);
-      buf[len] = 0;
-      unreleasedPacket = true;
+        header h;
+		readBuf((uint8_t *)&h, sizeof(header));
 
-      ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON2, ECON2_PKTDEC);
-   }
-   return len;
+		gNextPacketPtr = h.nextPacket;
+		len = h.byteCount - 4; //remove the CRC count
+		if (len > max_len )
+			len = max_len;
+		if ((h.status & 0x80) == 0)
+			len = 0;
+		else
+		{
+			SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_15);
+			
+			readBuf(buf, len);
+		}
+		buf[len] = 0;
+		
+			if(gNextPacketPtr == RXSTART_INIT)
+				ENC28_writeReg16(ERXRDPTL, RXSTOP_INIT);
+			else
+				ENC28_writeReg16(ERXRDPTL, gNextPacketPtr-1);
+			//enc28j60_writeOp(ENC28J60_BIT_FIELD_SET,ECON2,ECON2_PKTDEC);
+		//unreleasedPacket = true;
+
+		ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON2, ECON2_PKTDEC);
+	}
+	return len;
 }
 
 #endif
