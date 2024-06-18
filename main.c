@@ -21,7 +21,7 @@
 #include "lwip_interface/lwip.h"
 #include "APP/lwip_user.h"
 //--------include my protocol for peripherial control------
-//#include "proto_handle.h"
+#include "proto_handle.h"
 
 //---------------------------
 
@@ -86,6 +86,10 @@ timer_config time_param;
 static struct tcp_pcb *server_pcb;
 uint32_t lwip_localtime;
 
+uint8_t* proto_data_buff;
+uint16_t proto_data_len[1500];
+
+uint8_t read_data_flag = 0x00;
 uint8_t macaddr[6];
 
 int main()
@@ -99,6 +103,7 @@ int main()
         */
     //mem_init();
 	//memp_init();
+
 	init_GPIO();
     timer_init(TIM2_BASE, &time_param);	
 	//init_uart_service();
@@ -119,7 +124,6 @@ int main()
         }
     #endif
 
-    //lwip_init();
     lwip_init();
     //ENC28_SetPhyInterface(&spi_1);
     TIM_EnableIT_UPDATE(TIM2);
@@ -140,18 +144,42 @@ int main()
 	//printf("\r");
 #endif
 	
+    server_init();
+    proto_init();
+
 	while(1)
 	{
         //lwip_periodic_handle();
         //LwIP_Periodic_Handle(lwip_localtime);
         LwIP_Pkt_Handle();
-        led_on();
+        
+        if(read_data_flag == 0x01)
+        {
+            led_on();
+        }
 		//LwIP_Periodic_Handle(lwip_localtime);
         
         //delay();
         //sys_check_timeouts();
         //server_poll();
-		led_off();
+        //delay(1);
+		if(read_data_flag == 0x02)
+        {
+            led_off();
+        }
+
+        //send data to proto handler if proto_data_len > 0 
+        if(proto_data_len > 0)
+        {
+            proto_send(proto_data_buff, proto_data_len);      
+            proto_data_len = 0;
+        }
+
+        //check ready data to in peripherial 
+        if(proto_data_len > 0)
+        {
+            server_send(tpcb, es);
+        }
 		//delay();
         //sys_check_timeouts();
 	}
@@ -262,6 +290,17 @@ void init_GPIO()
 
     SET_BIT(GPIOE->PUPDR, GPIO_PUPDR_PUPDR15_0);
     CLEAR_BIT(GPIOE->PUPDR, GPIO_PUPDR_PUPDR15_1);
+
+    CLEAR_BIT(GPIOB->MODER, GPIO_MODER_MODER11_0);
+    CLEAR_BIT(GPIOB->MODER, GPIO_MODER_MODER11_1);
+
+    CLEAR_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT_11);
+
+    SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR11_1);
+    SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR11_0);
+
+    CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR11_0);
+    CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR11_1);
 }
 
 void debug_print(int data)

@@ -1,6 +1,5 @@
 /build
 /cyclone_tcp
-/perip_proto
 /driver/enc28j60_driver.c
 /driver/enc28j60_driver.h
 /lwip

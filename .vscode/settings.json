@@ -15,5 +15,6 @@
         "stm32f303xc.h": "c",
         "tcp_impl.h": "c"
     },
-    "cortex-debug.variableUseNaturalFormat": false
+    "cortex-debug.variableUseNaturalFormat": false,
+    "C_Cpp.errorSquiggles": "disabled"
 }

@@ -1,6 +1,12 @@
 #include "tcp_server.h"
+#include "stdint.h"
 
 extern u32_t lwip_localtime;
+
+extern u8_t* proto_data_buff;
+extern u16_t proto_data_len;
+
+extern u8_t read_data_flag;
 
 void server_init(void)
 {
@@ -9,7 +15,7 @@ void server_init(void)
     {
         err_t err;
 
-        err = tcp_bind(server_pcb, IP_ADDR_ANY, 7);
+        err = tcp_bind(server_pcb, IP_ADDR_ANY, 2024);
         if (err == ERR_OK)
         {
             server_pcb = tcp_listen(server_pcb);
@@ -111,6 +117,23 @@ err_t server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
         if(es->p == NULL)
         {
             es->p = p;
+            
+            for(int i = 0;i < p->len; i++)
+            {
+                if(((uint8_t*) p->payload)[0] == 0x61)
+                {
+                    read_data_flag = 0x01;
+                }
+                else if(((uint8_t*) p->payload)[0] == 0x62)
+                {
+                    read_data_flag = 0x02;
+                }
+
+                //copy data to the buffer            
+                proto_data_buff[i] = ((uint8_t*) p->payload)[i];
+                //set data read flag
+                proto_data_len = p->len;
+            }
             tcp_sent(tpcb, server_sent);
             server_send(tpcb, es);
         }
@@ -278,7 +301,7 @@ void server_close(struct tcp_pcb *tpcb, struct echo_state *es)
     tcp_close(tpcb);
 }
 
-u32_t sys_now(void)
+/*u32_t sys_now(void)
 {
     return lwip_localtime;
-}
+}*/

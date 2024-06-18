@@ -35,13 +35,11 @@
 //#define TXSTART_INIT							0x0C00
 //#define TXSTOP_INIT								0x11FF
 
-#define RXSTART_INIT     0x0
-// RX buffer end
-#define RXSTOP_INIT      (0x1FFF-0x0600-1)
-// start TX buffer at 0x1FFF-0x0600, place for one full ethernet frame (~1500 bytes)
-#define TXSTART_INIT     (0x1FFF-0x0600)
-// stop TX buffer at end of mem
-#define TXSTOP_INIT      0x1FFF
+#define RXSTART_INIT        0x0000 // start of RX buffer, room for 2 packets
+#define RXSTOP_INIT         0x19FF // end of RX buffer
+//--------------------------------------------------
+#define TXSTART_INIT        0x1A00    // start of TX buffer, room for 1 packet
+#define TXSTOP_INIT         0x1FFF  // end of TX buffer
 
 #define MAX_FRAMELEN							1500
 
@@ -153,6 +151,7 @@
 #define ECON1_BSEL1								0x02
 
 #define ESTAT_CLKRDY 							0x01
+#define ESTAT_BUFFER 							0x40
 
 #define ECON2_PKTDEC							0x40
 #define ECON2_AUTOINC							0x80
@@ -203,9 +202,21 @@
 
 #define EIE_INTIE							    0x80 
 #define EIE_PKTIE								0x40
-#define EIR_TXERIF								0x02
+#define EIE_LINKIE	0x10
+#define EIE_TXIE	0x08
+/* #define EIE_WOLIE	0x04 (reserved) */
+#define EIE_TXERIE	0x02
+#define EIE_RXERIE	0x01
+
+
 #define EIR_PKTIF 								0x40
-#define EIR_TXIF								0x08
+#define EIR_DMAIF	0x20
+#define EIR_LINKIF	0x10
+#define EIR_TXIF	0x08
+/* #define EIR_WOLIF	0x04 (reserved) */
+#define EIR_TXERIF	0x02
+#define EIR_RXERIF	0x01
+
 #define MICMD_MIIRD								0x01
 
 // PHY layer
@@ -237,6 +248,10 @@
 #define PHIR             0x13
 #define PHLCON           0x14
 
+/* ENC28J60 PHY PHIE Register Bit Definitions */
+#define PHIE_PLNKIE	(1 << 4)
+#define PHIE_PGEIE	(1 << 1)
+
 // PHLCON
 #define PHLCON_LACFG3  0x0800
 #define PHLCON_LACFG2  0x0400
@@ -249,6 +264,7 @@
 #define PHLCON_LFRQ1  0x0008
 #define PHLCON_LFRQ0  0x0004
 #define PHLCON_STRCH  0x0002
+#define ENC28J60_LAMPS_MODE	0x3476
 
 // accessors to GPIO defines
 void enableChip (void);

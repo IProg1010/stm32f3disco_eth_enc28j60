@@ -31,6 +31,7 @@ extern uint32_t lwip_localtime;
 #define PIN_CS			GPIO_PIN_4
 
 static uint8_t Enc28_Bank;
+uint16_t gNextPacketPtr;
 
 void del()
 {
@@ -43,8 +44,8 @@ void del()
 void enableChip()
 {
 	//HAL_GPIO_WritePin(PORT_CS,PIN_CS,GPIO_PIN_RESET);
-
    SET_BIT(GPIOA->BRR, GPIO_BRR_BR_4);
+
 }
 
 void disableChip()
@@ -64,16 +65,16 @@ uint8_t ENC28_readOp(uint8_t oper, uint8_t addr)
    enableChip();
    spiData[0] = (oper | (addr & ADDR_MASK));
    //HAL_SPI_Transmit(&hspi, spiData, 1, 100);
-   spi_write(SPI1_BASE, spiData, 1);
+   spi_write(SPI2_BASE, spiData, 1);
    if (addr & 0x80)
    {
       //HAL_SPI_Transmit(&hspi, spiData, 1, 100);
-      spi_write(SPI1_BASE, spiData, 1);
-      spi_read(SPI1_BASE, &spiData[1], 1);
+      //spi_write(SPI2_BASE, spiData, 1);
+      spi_read(SPI2_BASE, &spiData[1], 1);
       //HAL_SPI_Receive(&hspi, &spiData[1], 1, 100);
    }
    //HAL_SPI_Receive(&hspi, &spiData[1], 1, 100);
-   spi_read(SPI1_BASE, &spiData[1], 1);
+   spi_read(SPI2_BASE, &spiData[1], 1);
 
    disableChip();
 
@@ -86,7 +87,7 @@ void ENC28_writeOp(uint8_t oper, uint8_t addr, uint8_t data)
    spiData[0] = (oper | (addr & ADDR_MASK)); //((oper<<5)&0xE0)|(addr & ADDR_MASK);
    spiData[1] = data;
    //HAL_SPI_Transmit(&hspi, spiData, 2, 100);
-   spi_write(SPI1_BASE, spiData, 2);
+   spi_write(SPI2_BASE, spiData, 2);
    disableChip();
 }
 uint8_t ENC28_readReg8(uint8_t addr)
@@ -171,8 +172,8 @@ uint8_t ENC28J60_Init(const uint8_t *macaddr)
 
 	disableChip();
 
-	spi_init(SPI1_BASE, 0);
-	spi_enable(SPI1_BASE, 1);
+	spi_init(SPI2_BASE, 0);
+	spi_enable(SPI2_BASE, 1);
 	//HAL_Delay(1);
 	delay(1);
 	//del();
@@ -191,8 +192,15 @@ uint8_t ENC28J60_Init(const uint8_t *macaddr)
 	ENC28_writeReg16(ERXSTL, RXSTART_INIT);
 	ENC28_writeReg16(ERXRDPTL, RXSTART_INIT);
 	ENC28_writeReg16(ERXNDL, RXSTOP_INIT);
+	ENC28_writeReg16(ERDPTL, RXSTART_INIT);
 	ENC28_writeReg16(ETXSTL, TXSTART_INIT);
 	ENC28_writeReg16(ETXNDL, TXSTOP_INIT);
+
+	gNextPacketPtr = RXSTART_INIT;
+	//if(gNextPacketPtr == RXSTART_INIT)
+	//	ENC28_writeReg16(ERXRDPTL, RXSTOP_INIT);
+	//else
+	//	ENC28_writeReg16(ERXRDPTL, gNextPacketPtr-1);
 
 	//ENC28J60_enableBroadcast(1);
 	// Arduino lib set this here
@@ -200,7 +208,10 @@ uint8_t ENC28J60_Init(const uint8_t *macaddr)
 	//ENC28_writePhy(PHLCON, 0x476);
 
 	// (5): Receive buffer filters
-	ENC28_writeReg8(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_BCEN);
+	
+	uint8_t erxfcon =  ERXFCON_UCEN|ERXFCON_CRCEN|ERXFCON_BCEN;
+	ENC28_writeReg8(ERXFCON, erxfcon);
+	//ENC28_writeReg8(ERXFCON, ERXFCON_UCEN | ERXFCON_CRCEN | ERXFCON_BCEN);
 
 	// additional Arduino setup
 	//ENC28_writeReg16(EPMM0, 0x303f); // pattern match filter
@@ -240,30 +251,48 @@ uint8_t ENC28J60_Init(const uint8_t *macaddr)
 	//**********Advanced Initialisations************//
 	// (1): Initialise PHY layer registers
 	//	ENC28_writePhy(PHLCON, PHLCON_LED);
-	ENC28_writePhy(PHCON2, PHCON2_HDLDIS);
-	ENC28_writePhy(PHLCON, PHLCON_LACFG3| // настраиваем светодиодики
-        PHLCON_LBCFG2|PHLCON_LBCFG1|PHLCON_LBCFG0|
-        PHLCON_LFRQ0|PHLCON_STRCH);
+	//ENC28_writePhy(PHCON1, PHCON1_PDPXMD);
+	ENC28_writePhy(PHCON1, PHCON1_PDPXMD);
+	
+	ENC28_writePhy(PHCON2, 0x00);
+	//ENC28_writePhy(PHCON2, PHCON2_HDLDIS);
+	/* Preferred half duplex: LEDA: Link status LEDB: Rx/Tx activity */
+	ENC28_writePhy(PHLCON, ENC28J60_LAMPS_MODE);
+	//ENC28_writePhy(PHLCON, 0x476);
+	//ENC28_writePhy(PHIE, PHIE_PGEIE | PHIE_PLNKIE);
 
 	// (2): Enable Rx interrupt line
 	ENC28_setBank(ECON1);
 
-	ENC28_writeOp(ENC28J60_BIT_FIELD_SET, EIE, EIE_INTIE | EIE_PKTIE);
+	
+	ENC28_writeReg8(ECON1, 0x00);
+	//ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON2, ECON2_AUTOINC);
+
+
+	//ENC28_writeOp(ENC28J60_BIT_FIELD_CLR, EIR, EIR_DMAIF | EIR_LINKIF |
+	//		 EIR_TXIF | EIR_TXERIF | EIR_RXERIF | EIR_PKTIF);
+
+	//ENC28_writeOp(ENC28J60_BIT_FIELD_SET, EIE,  EIE_INTIE | EIE_PKTIE | EIE_LINKIE 
+	//			|EIE_TXIE | EIE_TXERIE | EIE_RXERIE);
+
 	ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
+
+	ENC28_writeOp(ENC28J60_BIT_FIELD_SET, EIR, EIR_PKTIF);
 
 	// not used in Arduino code
 	// ENC28_writeOp(ENC28J60_BIT_FIELD_SET, EIR, EIR_PKTIF);
 
-	uint8_t rev = ENC28_readReg8(EREVID);
+	/*uint8_t rev = ENC28_readReg8(EREVID);
 	// microchip forgot to step the number on the silicon when they
 	// released the revision B7. 6 is now rev B7. We still have
 	// to see what they do when they release B8. At the moment
 	// there is no B8 out yet
-	if (rev > 1){
+	if (rev == 6){
 		++rev; // implement arduino's revision value return.
 	
     	SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_14);
-	}
+	}*/
+	delay(1);
 	return 0;
 }
 
@@ -298,14 +327,14 @@ static void ENC28_writeBuf(uint8_t *data, uint16_t len)
 
    spiData[0] = ENC28J60_WRITE_BUF_MEM;
    //HAL_SPI_Transmit(&hspi, spiData, 1, 100);
-   spi_write(SPI1_BASE, spiData, 1);
+   spi_write(SPI2_BASE, spiData, 1);
 
    //	spiData[1] = 0xFF;
    //	HAL_SPI_Transmit(&hspi, &spiData[1], 1, 100);
-   //spi_write(SPI1_BASE, spiData[1], 1);
+   //spi_write(SPI2_BASE, spiData[1], 1);
 
    //HAL_SPI_Transmit(&hspi, data, len, 100);
-   spi_write(SPI1_BASE, data, len);
+   spi_write(SPI2_BASE, data, len);
 
    // disable chip
    disableChip();
@@ -386,16 +415,15 @@ void readBuf(uint8_t *data, uint16_t len)
    {
       spiData[0] = ENC28J60_READ_BUF_MEM;
       //HAL_SPI_Transmit(&hspi, spiData, 1, 100);
-      spi_write(SPI1_BASE, spiData, 1);
+      spi_write(SPI2_BASE, spiData, 1);
       //HAL_SPI_Receive(&hspi, data, len, 100);
-      spi_read(SPI1_BASE, data, len);
+      spi_read(SPI2_BASE, data, len);
    }
    disableChip();
 }
 
 uint16_t ENC28J60_packetReceive(uint8_t *buf, int max_len)
 {
-   static uint16_t gNextPacketPtr = RXSTART_INIT;
    static bool unreleasedPacket = false;
    uint16_t len = 0;
 
@@ -408,43 +436,143 @@ uint16_t ENC28J60_packetReceive(uint8_t *buf, int max_len)
    //   unreleasedPacket = false;
   	// }
 
-	if (ENC28_readReg8(EPKTCNT) > 0)
+	static uint8_t d_t = 0;
+	if(ENC28_readReg8(EPKTCNT) != 0){
+		while (ENC28_readReg8(EPKTCNT) != 0)
+		{
+			d_t = 0;
+			//gNextPacketPtr = ENC28_readReg16(ERXRDPTL);
+			ENC28_writeReg16(ERDPTL, gNextPacketPtr);
+
+			typedef struct
+			{
+				uint16_t nextPacket;
+				uint16_t byteCount;
+				uint16_t status;
+			} header;
+
+			header h;
+			readBuf((uint8_t *)&h, sizeof(header));
+
+			gNextPacketPtr = h.nextPacket;
+			len = h.byteCount - 4; //remove the CRC count
+			if (len > max_len )
+				len = max_len;
+			if ((h.status & 0x80) == 0)
+				len = 0;
+			else
+			{
+				SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_15);
+				
+				readBuf(buf, len);
+			}
+			buf[len] = 0;
+			
+				if(gNextPacketPtr == RXSTART_INIT)
+			//|| (gNextPacketPtr -1 > RXSTOP_INIT))
+				{
+					ENC28_writeReg16(ERXRDPTL, RXSTOP_INIT-1);
+					//gNextPacketPtr = RXSTOP_INIT;
+				}
+				else
+				{
+					ENC28_writeReg16(ERXRDPTL, gNextPacketPtr-1);
+					//gNextPacketPtr = gNextPacketPtr-1;
+				}
+				//enc28j60_writeOp(ENC28J60_BIT_FIELD_SET,ECON2,ECON2_PKTDEC);
+			//unreleasedPacket = true;
+
+			ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON2, ECON2_PKTDEC);
+
+			//ENC28_writeOp(ENC28J60_BIT_FIELD_CLR, EIR, EIR_PKTIF);
+		}
+	}
+	else
 	{
 
-    	ENC28_writeReg16(ERDPTL, gNextPacketPtr);
+		//ENC28_writeOp(ENC28J60_BIT_FIELD_CLR, EIR, EIR_PKTIF);
+		//d_t++;
+		//if(d_t > 200)
+		//{
+		//	d_t = 0;
+		//	ENC28_writeOp(ENC28J60_SOFT_RESET, 0, ENC28J60_SOFT_RESET);
+		//	delay(1);
+			//del();
 
-		typedef struct
-		{
-			uint16_t nextPacket;
-			uint16_t byteCount;
-			uint16_t status;
-		} header;
-
-        header h;
-		readBuf((uint8_t *)&h, sizeof(header));
-
-		gNextPacketPtr = h.nextPacket;
-		len = h.byteCount - 4; //remove the CRC count
-		if (len > max_len )
-			len = max_len;
-		if ((h.status & 0x80) == 0)
-			len = 0;
-		else
-		{
-			SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_15);
-			
-			readBuf(buf, len);
-		}
-		buf[len] = 0;
+			// (3): Wait untill Clock is ready
+		//	while (!ENC28_readOp(ENC28J60_READ_CTRL_REG, ESTAT) & ESTAT_CLKRDY)
+		//		;
+		//}
 		
-			if(gNextPacketPtr == RXSTART_INIT)
-				ENC28_writeReg16(ERXRDPTL, RXSTOP_INIT);
-			else
-				ENC28_writeReg16(ERXRDPTL, gNextPacketPtr-1);
-			//enc28j60_writeOp(ENC28J60_BIT_FIELD_SET,ECON2,ECON2_PKTDEC);
-		//unreleasedPacket = true;
+		uint8_t stateEconRxen = ENC28_readReg8(ECON1) & ECON1_RXEN;
+       	// ESTAT.BUFFER rised on TX or RX error
+       	// I think the test of this register is not necessary - EIR.RXERIF state checking may be enough
+       	uint8_t stateEstatBuffer = ENC28_readReg8(ESTAT) & ESTAT_BUFFER;
+       	// EIR.RXERIF set on RX error
+       	uint8_t stateEirRxerif = ENC28_readReg8(EIR) & EIR_RXERIF;
 
-		ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON2, ECON2_PKTDEC);
+		//uint8_t rev = ENC28_readReg8(EREVID);
+		SET_BIT(GPIOE->BRR, GPIO_BRR_BR_15);
+		// microchip forgot to step the number on the silicon when they
+		// released the revision B7. 6 is now rev B7. We still have
+		// to see what they do when they release B8. At the moment
+		// there is no B8 out yet
+		/*if (rev == 6){
+			++rev; // implement arduino's revision value return.
+			static i = 0;
+			if(i == 0)
+			{
+				SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_14);
+				SET_BIT(GPIOE->BRR, GPIO_BRR_BR_12);
+				i++;
+			}
+			else
+			{
+				i--;
+				SET_BIT(GPIOE->BRR, GPIO_BRR_BR_14);
+				SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_12);
+			}
+			delay(1);
+		}*/
+		if ((!stateEconRxen) || (stateEstatBuffer && stateEirRxerif))//(!stateEconRxen) //|| (stateEstatBuffer && stateEirRxerif)) 
+		{
+        	//Serial.println ("ENC28J60 reinit");
+			
+			ENC28_writeReg16(ERXSTL, RXSTART_INIT);
+			ENC28_writeReg16(ERXRDPTL, RXSTART_INIT);
+			ENC28_writeReg16(ERXNDL, RXSTOP_INIT);
+			ENC28_writeReg16(ERDPTL, RXSTART_INIT);
+			ENC28_writeOp(ENC28J60_BIT_FIELD_CLR, EIR, EIR_RXERIF);
+			ENC28_writeOp(ENC28J60_BIT_FIELD_CLR, ESTAT, ESTAT_BUFFER);
+			ENC28_writeOp(ENC28J60_BIT_FIELD_SET, ECON1, ECON1_RXEN);
+			gNextPacketPtr = RXSTART_INIT;
+
+			//ENC28_writeReg16(ERXRDPTL, RXSTART_INIT);
+        	//eth_reset();
+			static i = 0;
+			if(i == 0)
+			{
+				SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_14);
+				SET_BIT(GPIOE->BRR, GPIO_BRR_BR_12);
+				i++;
+			}
+			else
+			{
+				i--;
+				SET_BIT(GPIOE->BRR, GPIO_BRR_BR_14);
+				SET_BIT(GPIOE->BSRR, GPIO_BSRR_BS_12);
+			}
+
+			//ENC28_writeOp(ENC28J60_SOFT_RESET, 0, ENC28J60_SOFT_RESET);
+			//delay(1);
+			//del();
+
+			// (3): Wait untill Clock is ready
+			//while (!ENC28_readOp(ENC28J60_READ_CTRL_REG, ESTAT) & ESTAT_CLKRDY)
+					;
+
+			delay(1);
+       	}
 	}
 	return len;
 }

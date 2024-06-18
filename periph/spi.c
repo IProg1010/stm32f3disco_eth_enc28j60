@@ -9,9 +9,23 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
     spi_gpio_enable(spi_interf);
     /*! Init SPI GPIO*/
     
-    /*! Enable SPI peripherial clock*/
-    SET_BIT(RCC->APB2ENR, RCC_APB2ENR_SPI1EN);
-    //SET_BIT(RCC->APB1ENR, RCC_APB1ENR_SPI2EN);
+    ///*! Enable SPI peripherial clock*/
+    if(spi_interf == SPI1_BASE)
+    {
+        SET_BIT(RCC->APB2ENR, RCC_APB2ENR_SPI1EN);
+    }
+    else if(spi_interf == SPI2_BASE)
+    {
+        SET_BIT(RCC->APB1ENR, RCC_APB1ENR_SPI2EN);
+    }
+    else if(spi_interf == SPI3_BASE)
+    {
+        SET_BIT(RCC->APB1ENR, RCC_APB1ENR_SPI3EN);
+    }
+    else
+    {
+
+    }
     /*! SPI Control register1
         --[15]  BIDIMODE - Bidirectional data mode enable
         --[14]  BIDIOE - Output enable in bidirectional mode
@@ -38,7 +52,7 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
     */
     
     //Bidirectional data mode enable
-    SET_BIT(spi_interf->CR1, SPI_CR1_BIDIMODE);     
+    CLEAR_BIT(spi_interf->CR1, SPI_CR1_BIDIMODE);     
     //Output enable in bidirectional mode
     CLEAR_BIT(spi_interf->CR1, SPI_CR1_BIDIOE); 
     //Full duplex mode
@@ -54,10 +68,10 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
     //Internal slave select
     SET_BIT(spi_interf->CR1, SPI_CR1_SSI);
     //MSB Frame format
-    SET_BIT(spi_interf->CR1, SPI_CR1_LSBFIRST);
+    CLEAR_BIT(spi_interf->CR1, SPI_CR1_LSBFIRST);
     //Baud rate control
     SET_BIT(spi_interf->CR1, SPI_CR1_BR_0);
-    SET_BIT(spi_interf->CR1, SPI_CR1_BR_1);
+    CLEAR_BIT(spi_interf->CR1, SPI_CR1_BR_1);
     CLEAR_BIT(spi_interf->CR1, SPI_CR1_BR_2);
     
     //Master selection
@@ -65,7 +79,7 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
     //SPI clock polarity
     CLEAR_BIT(spi_interf->CR1, SPI_CR1_CPOL);
     //SPI clock phase
-    SET_BIT(spi_interf->CR1, SPI_CR1_CPHA);
+    CLEAR_BIT(spi_interf->CR1, SPI_CR1_CPHA);
     
     /*! SPI Control register2
         --[7]   TXEIE - Tx buffer empty interrupt enable
@@ -76,6 +90,8 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
         --[0]   RXDMAEN - Rx buffer DMA enable
     */
  
+
+    SET_BIT(spi_interf->CR2, SPI_CR2_FRXTH);
     //Disable SPI TX buff empty interrupt
     CLEAR_BIT(spi_interf->CR2, SPI_CR2_TXEIE); 
     //Disable SPI RX buff not empty interrupt
@@ -117,23 +133,45 @@ void spi_init(SPI_TypeDef* spi_interf, spi_config* config)
 void spi_write(SPI_TypeDef* spi_interf,  uint8_t* data, uint16_t size)
 {
     uint16_t i = 0;
+    uint8_t d = 0;
     while(i < size)
     {
         while(!(READ_BIT(spi_interf->SR, SPI_SR_TXE) == (SPI_SR_TXE))) {}
-        spi_interf->DR = data[i];
+        *(__IO uint8_t*) &(spi_interf->DR) = data[i];
+        while((READ_BIT(spi_interf->SR, SPI_SR_BSY) == (SPI_SR_BSY))) {}
+        //while(spi_interf->SR & SPI_SR_RXNE == 0) { }
+        //d = *(__IO uint8_t*) &(spi_interf->DR);
+        
         i++;
     }
 }
 
 void spi_read(SPI_TypeDef* spi_interf, uint8_t* data, uint16_t size)
 {
-    uint16_t i = 0;
+    volatile uint16_t i = 0;
+    volatile uint16_t fed = 0;
+    volatile uint8_t d = 0;
     while(i < size)
     {
+        // while(!(READ_BIT(spi_interf->SR, SPI_SR_TXE) == (SPI_SR_TXE))) {}
         //spi_interf->DR = 0xFF;
-        while(!(READ_BIT(spi_interf->SR, SPI_SR_RXNE) == (SPI_SR_RXNE))) {}
-        data[i] = spi_interf->DR;
+        //while(spi_interf->SR & SPI_SR_RXNE == 0) { }
+        
+        //d = *(__IO uint8_t*) &(spi_interf->DR);
+        if(spi_interf->SR & SPI_SR_RXNE == 1)
+        {
+            while(spi_interf->SR & SPI_SR_FRLVL > 0) { d = *(__IO uint8_t*) &(spi_interf->DR); }
+        }
+        
+        while(!(READ_BIT(spi_interf->SR, SPI_SR_TXE) == (SPI_SR_TXE))) {}
+        *(__IO uint8_t*) &(spi_interf->DR) = 0xFF;
+        while((READ_BIT(spi_interf->SR, SPI_SR_BSY) == (SPI_SR_BSY))) {}
+        
+        while(spi_interf->SR & SPI_SR_RXNE == 0) { }
+        data[i] = *(__IO uint8_t*) &(spi_interf->DR);
+        //data[i] = d >> 8;
         i++;
+       
     }
 }
 
@@ -201,8 +239,7 @@ SPIx_NSS
         CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR5_0);
         CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR5_1);
         
-        GPIOA->AFR[0] |= (0x5 << GPIO_AFRH_AFRH5_Pos) | (0x5 << GPIO_AFRH_AFRH6_Pos) | (0x5 << GPIO_AFRH_AFRH7_Pos);
-
+        
         //SET_BIT(GPIOA->AFR[0], GPIO_AFRH_AFRH5);
         //SET_BIT(GPIOA->AFR[0], GPIO_AFRH_AFRH5);
         
@@ -230,6 +267,9 @@ SPIx_NSS
 
         CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR7_0);
         CLEAR_BIT(GPIOA->PUPDR, GPIO_PUPDR_PUPDR7_1);
+        
+        GPIOA->AFR[0] |= (0x5 << GPIO_AFRH_AFRH5_Pos) | (0x5 << GPIO_AFRH_AFRH6_Pos) | (0x5 << GPIO_AFRH_AFRH7_Pos);
+
     }
     else if(addr == SPI2_BASE)
     {
@@ -240,16 +280,46 @@ SPIx_NSS
             MOSI - GPIOB15 (PB15)
         */
         SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOBEN);
+        
+        //PB13 Alternate function push-pull
+        CLEAR_BIT(GPIOB->MODER, GPIO_MODER_MODER13_0);
+        SET_BIT(GPIOB->MODER, GPIO_MODER_MODER13_1);
 
-        /*PB13 Output Alternate function push-pull*/
-        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF13); 
-        /*PB14 Output Alternate function push-pull*/
-        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF14); 
-        /*PB15 Output Alternate function push-pull*/
-        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); */
+        CLEAR_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT_13);
+
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR13_1);
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR13_0);
+
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR13_0);
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR13_1);
+        
+        //PB14 Input floating / Input pull-up
+        
+        CLEAR_BIT(GPIOB->MODER, GPIO_MODER_MODER14_0);
+        SET_BIT(GPIOB->MODER, GPIO_MODER_MODER14_1);
+
+        CLEAR_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT_14);
+
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR14_1);
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR14_0);
+
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR14_0);
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR14_1);
+
+        //PB15 Alternate function push-pull
+        CLEAR_BIT(GPIOB->MODER, GPIO_MODER_MODER15_0);
+        SET_BIT(GPIOB->MODER, GPIO_MODER_MODER15_1);
+
+        CLEAR_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT_15);
+
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR15_1);
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR15_0);
+
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR15_0);
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR15_1);
+        
+        GPIOB->AFR[1] |= (0x5 << GPIO_AFRH_AFRH5_Pos) | (0x5 << GPIO_AFRH_AFRH6_Pos) | (0x5 << GPIO_AFRH_AFRH7_Pos);
+
     }
     else if(addr == SPI3_BASE)
     {
@@ -261,15 +331,47 @@ SPIx_NSS
         */
         SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOCEN);
 
-        /*PB13 Output Alternate function push-pull*/
-        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE13);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF13); 
-        /*PB14 Output Alternate function push-pull*/
-        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE14);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF14); 
-        /*PB15 Output Alternate function push-pull*/
-        /*WRITE_REG(GPIOB->CRH, GPIO_CRH_MODE15);
-        WRITE_REG(GPIOB->CRH, GPIO_CRH_CNF15); */
+               SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIOBEN);
+        
+        //PB13 Alternate function push-pull
+        CLEAR_BIT(GPIOB->MODER, GPIO_MODER_MODER13_0);
+        SET_BIT(GPIOB->MODER, GPIO_MODER_MODER13_1);
+
+        CLEAR_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT_13);
+
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR13_1);
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR13_0);
+
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR13_0);
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR13_1);
+        
+        //PB14 Input floating / Input pull-up
+        
+        CLEAR_BIT(GPIOB->MODER, GPIO_MODER_MODER14_0);
+        SET_BIT(GPIOB->MODER, GPIO_MODER_MODER14_1);
+
+        CLEAR_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT_14);
+
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR14_1);
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR14_0);
+
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR14_0);
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR14_1);
+
+        //PB15 Alternate function push-pull
+        CLEAR_BIT(GPIOB->MODER, GPIO_MODER_MODER15_0);
+        SET_BIT(GPIOB->MODER, GPIO_MODER_MODER15_1);
+
+        CLEAR_BIT(GPIOB->OTYPER, GPIO_OTYPER_OT_15);
+
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR15_1);
+        SET_BIT(GPIOB->OSPEEDR, GPIO_OSPEEDER_OSPEEDR15_0);
+
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR15_0);
+        CLEAR_BIT(GPIOB->PUPDR, GPIO_PUPDR_PUPDR15_1);
+        
+        GPIOB->AFR[1] |= (0x5 << GPIO_AFRH_AFRH5_Pos) | (0x5 << GPIO_AFRH_AFRH6_Pos) | (0x5 << GPIO_AFRH_AFRH7_Pos);
+
     }
 }   
 

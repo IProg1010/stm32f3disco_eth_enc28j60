@@ -35,7 +35,7 @@ set(SRC_FILES
 	${CMAKE_SOURCE_DIR}/driver/enc28j60.c
 	#${CMAKE_SOURCE_DIR}/APP/lwip_user.c
 	${CMAKE_SOURCE_DIR}/lwip_interface/lwip.c
-	#${CMAKE_SOURCE_DIR}/lwip_port/tcp_server_raw/tcp_server.c
+	${CMAKE_SOURCE_DIR}/lwip_port/tcp_server_raw/tcp_server.c
 	${CMAKE_SOURCE_DIR}/lwip_port/port/ethernetif.c
 	${CMAKE_SOURCE_DIR}/lwip/src/netif/etharp.c
 	#${CMAKE_SOURCE_DIR}/lwip/src/netif/slipif.c
@@ -114,7 +114,7 @@ target_compile_options(${EXECUTABLE} PRIVATE
 	-fdata-sections
 	-ffunction-sections
 	-Wall
-	-O1
+	-O3
 	)
 
 # Linker options
