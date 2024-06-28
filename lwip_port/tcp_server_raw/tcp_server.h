@@ -33,6 +33,9 @@ err_t server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
 void server_error(void *arg, err_t err);
 err_t server_poll(void *arg, struct tcp_pcb *tpcb);
 err_t server_sent(void *arg, struct tcp_pcb *tpcb, u16_t len);
+
+void server_send_raw(struct tcp_pcb *tpcb, u8_t data[], u16_t len);
+
 void server_send(struct tcp_pcb *tpcb, struct echo_state *es);
 void server_close(struct tcp_pcb *tpcb, struct echo_state *es);
 

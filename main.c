@@ -86,8 +86,13 @@ timer_config time_param;
 static struct tcp_pcb *server_pcb;
 uint32_t lwip_localtime;
 
-uint8_t* proto_data_buff;
-uint16_t proto_data_len[1500];
+uint8_t proto_data_buff[1500];
+uint16_t proto_data_len;
+struct tcp_pcb* tpcb_read;
+struct echo_state* es_read;
+
+extern uint16_t data_found;
+extern uint8_t send_packet[];
 
 uint8_t read_data_flag = 0x00;
 uint8_t macaddr[6];
@@ -153,7 +158,7 @@ int main()
         //LwIP_Periodic_Handle(lwip_localtime);
         LwIP_Pkt_Handle();
         
-        if(read_data_flag == 0x01)
+        /*if(read_data_flag == 0x01)
         {
             led_on();
         }
@@ -166,7 +171,7 @@ int main()
 		if(read_data_flag == 0x02)
         {
             led_off();
-        }
+        }*/
 
         //send data to proto handler if proto_data_len > 0 
         if(proto_data_len > 0)
@@ -175,10 +180,29 @@ int main()
             proto_data_len = 0;
         }
 
-        //check ready data to in peripherial 
-        if(proto_data_len > 0)
+        //check ready data from in peripherial 
+        if(data_found != 0)
         {
-            server_send(tpcb, es);
+            static int d = 0;
+            if(d == 0)
+            {
+                d++;
+                led_on();
+            }
+            else
+            {
+                d--;
+                led_off();
+            }
+
+            //es_read->p->payload = send_packet[0];
+            //es_read->p->len = data_found;
+            //es_read->p->next = NULL;
+            //es_read->pcb = tpcb_read;
+            tcp_sent(tpcb_read, server_sent);
+            //server_send(tpcb_read, es_read);
+            server_send_raw(tpcb_read, send_packet, data_found);
+            data_found = 0;
         }
 		//delay();
         //sys_check_timeouts();

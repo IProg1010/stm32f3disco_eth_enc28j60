@@ -33,6 +33,7 @@ set(SRC_FILES
 	${CMAKE_SOURCE_DIR}/periph/usart.c
 	${CMAKE_SOURCE_DIR}/periph/timer.c
 	${CMAKE_SOURCE_DIR}/driver/enc28j60.c
+	${CMAKE_SOURCE_DIR}/perip_proto/proto_handle.c
 	#${CMAKE_SOURCE_DIR}/APP/lwip_user.c
 	${CMAKE_SOURCE_DIR}/lwip_interface/lwip.c
 	${CMAKE_SOURCE_DIR}/lwip_port/tcp_server_raw/tcp_server.c
@@ -81,6 +82,7 @@ target_include_directories(${EXECUTABLE} PUBLIC
 	${CMAKE_SOURCE_DIR}/periph
 	${CMAKE_SOURCE_DIR}/driver
 	${CMAKE_SOURCE_DIR}/APP
+	${CMAKE_SOURCE_DIR}/perip_proto/
 	#${CMAKE_SOURCE_DIR}/net_core
 	${CMAKE_SOURCE_DIR}/lwip_interface/
 	${CMAKE_SOURCE_DIR}/lwip_port/tcp_server_raw

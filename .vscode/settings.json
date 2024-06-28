@@ -13,7 +13,8 @@
         "tcp_server.h": "c",
         "lwip.h": "c",
         "stm32f303xc.h": "c",
-        "tcp_impl.h": "c"
+        "tcp_impl.h": "c",
+        "f3_macros.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": false,
     "C_Cpp.errorSquiggles": "disabled"

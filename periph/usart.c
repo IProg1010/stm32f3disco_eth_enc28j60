@@ -122,7 +122,7 @@ void usart_init(USART_TypeDef* usart_inter, usart_config* config)
     
     //temp |= USART_CR1_OVER8;
     
-    if(config->parity != 0)
+    if(config->parity != 0x01)
     {
         temp |= USART_CR1_PCE;
         if(config->parity_type == 0x01)
@@ -154,20 +154,20 @@ void usart_init(USART_TypeDef* usart_inter, usart_config* config)
         --[3:0] ADD - Address of the USART node
     */   
 
-    if(config->stop_bit == 1)
+    if(config->stop_bit == 1) //0.5
     {
         temp |= USART_CR2_STOP_0;
         temp &= ~USART_CR2_STOP_1;
     }
-    if(config->stop_bit == 2)
+    if(config->stop_bit == 2) //1
     {
         temp &= ~(USART_CR2_STOP_0 | USART_CR2_STOP_1);
     }
-    if(config->stop_bit == 3)
+    if(config->stop_bit == 3)//1.5
     {
         temp |= USART_CR2_STOP_0 | USART_CR2_STOP_1;
     }
-    if(config->stop_bit == 4)
+    if(config->stop_bit == 4)//2
     {
         temp |= USART_CR2_STOP_1;
         temp &= ~USART_CR2_STOP_0;
@@ -204,7 +204,7 @@ void usart_init(USART_TypeDef* usart_inter, usart_config* config)
         --[3:0]     DIV_Fraction - fraction of USARTDIV
                     These 4 bits define the fraction of the USART Divider (USARTDIV)
     */
-    uint32_t usartdiv        
+    uint32_t usartdiv;        
     if(config->baud_rate == 1)
     {
         usartdiv = SystemCoreClock/9600;
@@ -278,9 +278,14 @@ void usart_init(USART_TypeDef* usart_inter, usart_config* config)
 }
 
 //init usart from usart_config
-void usart_init(usart_config* config)
+/*void usart_init(usart_config* config)
 {
-    usart(config->usart_base, config);
+    usart_init(config->usart_base, config);
+}*/
+
+void usart_config_from_ethernet()
+{
+    //usart_init(config->usart_base, config);
 }
 
 //enable uart
@@ -295,11 +300,68 @@ void usart_enable(USART_TypeDef* usart_inter,uint8_t enable)
 void usart_write(USART_TypeDef* usart_inter, uint8_t* data, uint16_t size)
 {
     uint16_t i = 0;
-    while(i < size)
+    
+    SET_BIT(usart_inter->CR1, USART_CR1_TXEIE);
+    
+    //SET_BIT(usart_inter->CR1, USART_CR1_TCIE);
+    SET_BIT(usart_inter->CR1, USART_CR1_RXNEIE); 
+
+    //while(i < size)
+    //{
+    //    while(!(usart_inter->ISR & USART_ISR_TXE)) { } 
+    //    usart_inter->TDR = data;
+    //    i++;
+    //}
+}
+
+void usart_write_it(USART_TypeDef* usart_inter, uint8_t* data, uint16_t size, void (*write_end_callback) (uint16_t len))
+{
+    uint16_t i = 0;
+    
+    //buffer setting and callback set
+    usart1_buff.transmitt = data;
+    usart1_buff.tr_data_count = 0;
+    usart1_buff.tr_data_len = size;
+    usart1_buff.write_end_call = write_end_callback;
+
+    //enable interrupt
+    SET_BIT(usart_inter->CR1, USART_CR1_TXEIE);
+    usart_inter->TDR = usart1_buff.transmitt[0];
+    usart1_buff.tr_data_count++;
+    //SET_BIT(usart_inter->CR1, USART_CR1_TCIE);
+}
+
+//usart1 interrupt function
+void USART1_IRQHandler()
+{
+    //transmitt new data to uart 
+    if(USART1->ISR & USART_ISR_TXE)
     {
-        while(!(usart_inter->ISR & USART_ISR_TXE)) { } 
-        usart_inter->TDR = data;
-        i++;
+        if(usart1_buff.tr_data_count < usart1_buff.tr_data_len)
+        {
+            USART1->TDR = usart1_buff.transmitt[usart1_buff.tr_data_count++];
+            usart1_buff.tr_flag |= 0x01;
+        }
+        else
+        {
+            usart1_buff.write_end_call(usart1_buff.tr_data_count);
+            usart1_buff.tr_flag |= 0x10;
+        }
+    }
+    
+    //receive new data from uart 
+    if(USART1->ISR & USART_ISR_RXNE)
+    {
+        if(usart1_buff.rv_data_count < usart1_buff.rv_data_len)
+        {
+            usart1_buff.received[usart1_buff.rv_data_count++] = USART1->RDR;
+            usart1_buff.rv_flag |= 0x01;
+        }
+        else
+        {
+            usart1_buff.rv_flag |= 0x10; 
+            usart1_buff.read_end_call(usart1_buff.rv_data_count );
+        }
     }
 }
 
@@ -311,7 +373,22 @@ void usart_read(USART_TypeDef* usart_inter, uint8_t* data, uint16_t size)
         while(!(usart_inter->ISR & USART_ISR_RXNE)) { } 
         data[i] = usart_inter->RDR;
         i++;
+        
     }
+
+    //SET_BIT(usart_inter->CR1, USART_CR1_RXNEIE); 
+}
+
+void usart_read_it(USART_TypeDef* usart_inter, uint8_t* data, uint16_t size, void (*read_end_callback) (uint16_t len))
+{   
+    //buffer setting and callback set
+    usart1_buff.received = data;
+    usart1_buff.rv_data_count = 0;
+    usart1_buff.rv_data_len = size;
+    usart1_buff.read_end_call = read_end_callback;
+
+    //enable interrupt
+    SET_BIT(usart_inter->CR1, USART_CR1_RXNEIE);
 }
 
 void usart_write_dma(USART_TypeDef* usart_inter, uint8_t* data, uint16_t size)
@@ -705,7 +782,7 @@ USARTx_CTS
 
             GPIOB->AFR[0] |= (0x7 << GPIO_AFRH_AFRH3_Pos) | (0x7 << GPIO_AFRH_AFRH4_Pos);
         }*/
-        else if(port_num == 4)
+        else if(port_num == 2)
         {
             SET_BIT(RCC->AHBENR, RCC_AHBENR_GPIODEN);
 
@@ -932,7 +1009,7 @@ USARTx_CTS
             CLEAR_BIT(GPIOD->PUPDR, GPIO_PUPDR_PUPDR10_0);
             CLEAR_BIT(GPIOD->PUPDR, GPIO_PUPDR_PUPDR10_1);
 
-            GPIOC->AFR[1] |= (0x5 << GPIO_AFRH_AFRH4_Pos)
+            GPIOC->AFR[1] |= (0x5 << GPIO_AFRH_AFRH4_Pos);
             GPIOD->AFR[0] |= (0x5 << GPIO_AFRH_AFRH2_Pos);
         }
         else
@@ -942,11 +1019,7 @@ USARTx_CTS
     }
 }   
 
-//usart1 interrupt function
-void USART1_IRQHandler()
-{
 
-}
 
 //usart2 interrupt function                            
 void USART2_IRQHandler()
@@ -972,7 +1045,7 @@ void UART5_IRQHandler()
 
 }
 
-void DMA1_Channel2_IRQn()
+void DMA1_Channel2_IRQHandler()
 {
     //USART3_TX
     if(DMA1->ISR & DMA_ISR_TCIF2 == DMA_ISR_TCIF2)
@@ -982,7 +1055,7 @@ void DMA1_Channel2_IRQn()
     }
 }
 
-void DMA1_Channel3_IRQn()
+void DMA1_Channel3_IRQHandler()
 {
     //USART3_RX
     if(DMA1->ISR & DMA_ISR_TCIF3 == DMA_ISR_TCIF3)
@@ -991,7 +1064,7 @@ void DMA1_Channel3_IRQn()
     }
 }
 
-void DMA1_Channel4_IRQn()
+void DMA1_Channel4_IRQHandler()
 {
     //USART1_TX
     if(DMA1->ISR & DMA_ISR_TCIF4 == DMA_ISR_TCIF4)
@@ -1001,7 +1074,7 @@ void DMA1_Channel4_IRQn()
     }
 }
 
-void DMA1_Channel5_IRQn()
+void DMA1_Channel5_IRQHandler()
 {
     //USART1_RX
     if(DMA1->ISR & DMA_ISR_TCIF5 == DMA_ISR_TCIF5)
@@ -1011,7 +1084,7 @@ void DMA1_Channel5_IRQn()
     }
 }
 
-void DMA1_Channel6_IRQn()
+void DMA1_Channel6_IRQHandler()
 {
     //USART2_RX
     if(DMA1->ISR & DMA_ISR_TCIF6 == DMA_ISR_TCIF6)
@@ -1020,7 +1093,7 @@ void DMA1_Channel6_IRQn()
         DMA1->IFCR |= DMA_IFCR_CTCIF6;
     }
 }
-void DMA1_Channel7_IRQn()
+void DMA1_Channel7_IRQHandler()
 {
     //USART2_TX
     if(DMA1->ISR & DMA_ISR_TCIF7 == DMA_ISR_TCIF7)
@@ -1030,7 +1103,7 @@ void DMA1_Channel7_IRQn()
     }
 }
 
-void DMA2_Channel3_IRQn()
+void DMA2_Channel3_IRQHandler()
 {
     //UART4_RX
     if(DMA2->ISR & DMA_ISR_TCIF3 == DMA_ISR_TCIF3)
@@ -1040,7 +1113,7 @@ void DMA2_Channel3_IRQn()
     }
 }
 
-void DMA2_Channel5_IRQn()
+void DMA2_Channel5_IRQHandler()
 {
     //UART4_TX
     if(DMA2->ISR & DMA_ISR_TCIF5 == DMA_ISR_TCIF5)
